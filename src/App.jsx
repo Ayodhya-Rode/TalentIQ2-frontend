@@ -8,6 +8,11 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { useAuth } from "./context/AuthContext";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
+
+
+
+
 
 function PublicLayout({ children }) {
   return (
@@ -23,6 +28,7 @@ function RoleDashboard() {
   const { user } = useAuth();
   
   if (user?.role === "SUPER_ADMIN") return <SuperAdminDashboard />;
+  if (user?.role === "EMPLOYEE") return <EmployeeDashboard />;
 
   // Placeholder until Employee/Candidate dashboards are built
   return (
