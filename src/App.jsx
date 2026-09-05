@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import HowItWorks from "./pages/HowItWorks";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { useAuth } from "./context/AuthContext";
+import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 
 function PublicLayout({ children }) {
   return (
@@ -15,6 +15,19 @@ function PublicLayout({ children }) {
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+    </div>
+  );
+}
+
+function RoleDashboard() {
+  const { user } = useAuth();
+  
+  if (user?.role === "SUPER_ADMIN") return <SuperAdminDashboard />;
+
+  // Placeholder until Employee/Candidate dashboards are built
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-bg-primary text-text-primary">
+      Dashboard for {user?.role} coming next.
     </div>
   );
 }
@@ -38,7 +51,7 @@ export default function App() {
         <Route path="/how-it-works" element={<PublicLayout><HowItWorks /></PublicLayout>} />
         <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
-        <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+        <Route path="/dashboard" element={user ?  <RoleDashboard /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
       </Routes>
     </BrowserRouter>

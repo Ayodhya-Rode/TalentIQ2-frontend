@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   const fetchMe = async () => {
     try {
       const res = await api.get("/auth/me");
-      setUser(res.data.data);
+      setUser(res.data.data.user);
     } catch {
       setUser(null);
     } finally {
@@ -19,7 +19,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    console.log("AuthProvider mounted, restoring session...");
     const tryRestoreSession = async () => {
       try {
         const res = await api.post("/auth/refresh");
