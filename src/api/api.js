@@ -58,10 +58,9 @@ api.interceptors.response.use(
 
     // Prevent refresh endpoint from triggering another refresh
     if (originalRequest.url?.includes("/auth/refresh")) {
-      setAccessToken(null);
-      window.location.href = "/login";
-      return Promise.reject(error);
-    }
+  setAccessToken(null);
+  return Promise.reject(error);
+}
 
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
