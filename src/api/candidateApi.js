@@ -22,3 +22,12 @@ export const getMyBookings = () => api.get("/candidate/bookings/my-bookings");
 
 export const candidateConfirmComplete = (bookingId) =>
   api.post(`/interviews/candidate/bookings/${bookingId}/confirm-complete`);
+
+export const rebookSameEmployee = (bookingId, newSlotId) =>
+  api.post(`/interviews/candidate/bookings/${bookingId}/rebook-same-employee`, { newSlotId });
+
+export const requestRefund = (bookingId) =>
+  api.post(`/interviews/candidate/bookings/${bookingId}/request-refund`);
+
+export const getEmployeeOpenSlots = (employeeProfileId) =>
+  api.get(`/candidate/bookings/employee/${employeeProfileId}/slots`);

@@ -7,6 +7,9 @@ import {
   verifyBookingPayment,
   getMyBookings,
   candidateConfirmComplete,
+  rebookSameEmployee,
+  getEmployeeOpenSlots,
+  requestRefund as apiRequestRefund,
 } from "../../api/candidateApi";
 import { getCategories } from "../../api/categoryApi";
 import DashboardHeader from "../../components/DashboardHeader";
@@ -15,7 +18,6 @@ import {
   CheckCircle2,
   CalendarClock,
   Wallet,
-  Search,
   Clock,
 } from "lucide-react";
 
@@ -41,7 +43,9 @@ function Overview({ summary }) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Your Stats</h2>
+        <h2 className="text-lg font-semibold text-text-primary mb-4">
+          Your Stats
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <SummaryCard
             icon={CheckCircle2}
@@ -53,17 +57,26 @@ function Overview({ summary }) {
             label="Upcoming Interviews"
             value={summary.upcomingConfirmedInterviews}
           />
-          <SummaryCard icon={Wallet} label="Total Paid" value={`₹${summary.totalAmountPaid}`} />
+          <SummaryCard
+            icon={Wallet}
+            label="Total Paid"
+            value={`₹${summary.totalAmountPaid}`}
+          />
         </div>
       </div>
 
       <div className="bg-bg-card border border-border rounded-xl p-6">
-        <h3 className="font-semibold text-text-primary mb-3">Booking Guidelines</h3>
+        <h3 className="font-semibold text-text-primary mb-3">
+          Booking Guidelines
+        </h3>
         <ul className="text-sm text-text-secondary space-y-2 list-disc list-inside">
           <li>You can see and book slots up to 7 days in advance.</li>
           <li>You can book at most 3 slots per week with the same employee.</li>
           <li>Each booking costs a flat ₹100, paid securely via Razorpay.</li>
-          <li>Confirm your interview as complete once it happens — both sides must confirm.</li>
+          <li>
+            Confirm your interview as complete once it happens — both sides must
+            confirm.
+          </li>
         </ul>
       </div>
     </div>
@@ -108,7 +121,8 @@ function BookInterview({ onBookingConfirmed }) {
 
     try {
       const orderRes = await createBookingOrder({ slotId });
-      const { bookingId, razorpayOrderId, amount, currency } = orderRes.data.data;
+      const { bookingId, razorpayOrderId, amount, currency } =
+        orderRes.data.data;
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -128,7 +142,9 @@ function BookInterview({ onBookingConfirmed }) {
             onBookingConfirmed();
             handleCategoryChange(selectedCategory);
           } catch (err) {
-            setError(err.response?.data?.message || "Payment verification failed");
+            setError(
+              err.response?.data?.message || "Payment verification failed",
+            );
           } finally {
             setBookingSlotId(null);
           }
@@ -150,7 +166,9 @@ function BookInterview({ onBookingConfirmed }) {
   return (
     <div>
       <div className="max-w-sm mb-6">
-        <label className="block text-sm text-text-secondary mb-1">Select a category</label>
+        <label className="block text-sm text-text-secondary mb-1">
+          Select a category
+        </label>
         <select
           value={selectedCategory}
           onChange={(e) => handleCategoryChange(e.target.value)}
@@ -167,24 +185,37 @@ function BookInterview({ onBookingConfirmed }) {
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
-      {loadingEmployees && <p className="text-text-secondary text-sm">Loading employees...</p>}
+      {loadingEmployees && (
+        <p className="text-text-secondary text-sm">Loading employees...</p>
+      )}
 
       {!loadingEmployees && selectedCategory && employees.length === 0 && (
-        <p className="text-text-secondary text-sm">No employees available in this category yet.</p>
+        <p className="text-text-secondary text-sm">
+          No employees available in this category yet.
+        </p>
       )}
 
       <div className="space-y-4">
         {employees.map((emp) => (
-          <div key={emp.id} className="bg-bg-card border border-border rounded-xl p-5">
+          <div
+            key={emp.id}
+            className="bg-bg-card border border-border rounded-xl p-5"
+          >
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="font-medium text-text-primary">{emp.user?.name}</p>
-                <p className="text-sm text-text-secondary">{emp.designation || "—"}</p>
+                <p className="font-medium text-text-primary">
+                  {emp.user?.name}
+                </p>
+                <p className="text-sm text-text-secondary">
+                  {emp.designation || "—"}
+                </p>
               </div>
             </div>
 
             {emp.slots.length === 0 ? (
-              <p className="text-xs text-text-secondary">No open slots in the next 7 days.</p>
+              <p className="text-xs text-text-secondary">
+                No open slots in the next 7 days.
+              </p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {emp.slots.map((slot) => (
@@ -211,65 +242,180 @@ function BookInterview({ onBookingConfirmed }) {
   );
 }
 
-function MyBookings({ bookings, onConfirm, confirmLoadingId }) {
+function RebookModal({ booking, availableSlots, onClose, onConfirm, loading }) {
+  const [selectedSlotId, setSelectedSlotId] = useState("");
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-md">
+        <h3 className="font-semibold text-text-primary mb-3">
+          Rebook with same employee
+        </h3>
+        <p className="text-sm text-text-secondary mb-4">
+          No new payment needed — your existing ₹{booking.amount} will be used
+          for the new slot.
+        </p>
+
+        {availableSlots.length === 0 ? (
+          <p className="text-sm text-text-secondary mb-4">
+            This employee has no other open slots right now. Try requesting a
+            refund instead.
+          </p>
+        ) : (
+          <select
+            value={selectedSlotId}
+            onChange={(e) => setSelectedSlotId(e.target.value)}
+            className="w-full bg-bg-secondary border border-border rounded px-3 py-2 text-sm text-text-primary mb-4"
+          >
+            <option value="">Select a slot</option>
+            {availableSlots.map((s) => (
+              <option key={s.id} value={s.id}>
+                {new Date(s.startTime).toLocaleString()}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="text-sm text-text-secondary px-4 py-2 rounded hover:bg-bg-secondary"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => onConfirm(booking.id, selectedSlotId)}
+            disabled={loading || !selectedSlotId}
+            className="text-sm bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            {loading ? "Rebooking..." : "Confirm Rebook"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MyBookings({
+  bookings,
+  onConfirm,
+  confirmLoadingId,
+  onRebook,
+  onRefund,
+  actionLoading,
+  getEmployeeSlots,
+}) {
+  const [rebookTarget, setRebookTarget] = useState(null);
+  const [rebookSlots, setRebookSlots] = useState([]);
+
   if (bookings.length === 0) {
     return <p className="text-text-secondary text-sm">No bookings yet.</p>;
   }
 
+  const openRebookModal = async (booking) => {
+    const slots = await getEmployeeSlots(booking.employeeProfile.id);
+    setRebookSlots(slots);
+    setRebookTarget(booking);
+  };
+
   return (
-    <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-bg-secondary text-text-secondary text-left">
-          <tr>
-            <th className="px-4 py-3 font-medium">Employee</th>
-            <th className="px-4 py-3 font-medium">Slot</th>
-            <th className="px-4 py-3 font-medium">Amount</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bookings.map((b) => (
-            <tr key={b.id} className="border-t border-border">
-              <td className="px-4 py-3 text-text-primary">
-                {b.employeeProfile?.user?.name || "—"}
-              </td>
-              <td className="px-4 py-3 text-text-secondary">
-                {new Date(b.slot.startTime).toLocaleString()}
-              </td>
-              <td className="px-4 py-3 text-text-secondary">₹{b.amount}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    b.status === "COMPLETED"
-                      ? "bg-green-500/10 text-green-600"
-                      : b.status === "CONFIRMED"
-                      ? "bg-blue-500/10 text-blue-600"
-                      : "bg-gray-500/10 text-text-secondary"
-                  }`}
-                >
-                  {b.status}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                {b.status === "CONFIRMED" && !b.candidateConfirmedAt && (
-                  <button
-                    onClick={() => onConfirm(b.id)}
-                    disabled={confirmLoadingId === b.id}
-                    className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
-                  >
-                    Confirm Complete
-                  </button>
-                )}
-                {b.candidateConfirmedAt && b.status !== "COMPLETED" && (
-                  <span className="text-xs text-text-secondary">Waiting for employee</span>
-                )}
-              </td>
+    <>
+      <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-bg-secondary text-text-secondary text-left">
+            <tr>
+              <th className="px-4 py-3 font-medium">Employee</th>
+              <th className="px-4 py-3 font-medium">Slot</th>
+              <th className="px-4 py-3 font-medium">Amount</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium text-right">Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {bookings.map((b) => (
+              <tr key={b.id} className="border-t border-border">
+                <td className="px-4 py-3 text-text-primary">
+                  {b.employeeProfile?.user?.name || "—"}
+                </td>
+                <td className="px-4 py-3 text-text-secondary">
+                  {new Date(b.slot.startTime).toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-text-secondary">₹{b.amount}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${
+                      b.status === "COMPLETED"
+                        ? "bg-green-500/10 text-green-600"
+                        : b.status === "CONFIRMED"
+                          ? "bg-blue-500/10 text-blue-600"
+                          : b.status === "CANCELLED"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-gray-500/10 text-text-secondary"
+                    }`}
+                  >
+                    {b.status}
+                  </span>
+                  {b.status === "CANCELLED" &&
+                    b.refundStatus === "PROCESSED" && (
+                      <span className="ml-2 text-xs text-green-600">
+                        Refunded
+                      </span>
+                    )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {b.status === "CONFIRMED" && !b.candidateConfirmedAt && (
+                    <button
+                      onClick={() => onConfirm(b.id)}
+                      disabled={confirmLoadingId === b.id}
+                      className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                    >
+                      Confirm Complete
+                    </button>
+                  )}
+                  {b.candidateConfirmedAt && b.status !== "COMPLETED" && (
+                    <span className="text-xs text-text-secondary">
+                      Waiting for employee
+                    </span>
+                  )}
+                  {b.status === "CANCELLED" && b.refundStatus === "PENDING" && (
+                    <div className="flex gap-2 justify-end flex-wrap">
+                      <button
+                        onClick={() => openRebookModal(b)}
+                        className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors"
+                      >
+                        <CalendarClock size={12} />
+                        Rebook Same Employee
+                      </button>
+                      <button
+                        onClick={() => onRefund(b.id)}
+                        disabled={actionLoading}
+                        className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                      >
+                        <Wallet size={12} />
+                        Request Refund
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {rebookTarget && (
+        <RebookModal
+          booking={rebookTarget}
+          availableSlots={rebookSlots}
+          onClose={() => setRebookTarget(null)}
+          onConfirm={(id, newSlotId) => {
+            onRebook(id, newSlotId);
+            setRebookTarget(null);
+          }}
+          loading={actionLoading}
+        />
+      )}
+    </>
   );
 }
 
@@ -280,6 +426,7 @@ export default function CandidateDashboard() {
   const [needsProfile, setNeedsProfile] = useState(false);
   const [confirmLoadingId, setConfirmLoadingId] = useState(null);
   const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadAll = async () => {
     try {
@@ -296,7 +443,9 @@ export default function CandidateDashboard() {
       if (err.response?.status === 404) {
         setNeedsProfile(true);
       } else {
-        setError(err.response?.data?.message || "Failed to load dashboard data");
+        setError(
+          err.response?.data?.message || "Failed to load dashboard data",
+        );
       }
     }
   };
@@ -314,6 +463,44 @@ export default function CandidateDashboard() {
       setError(err.response?.data?.message || "Failed to confirm completion");
     } finally {
       setConfirmLoadingId(null);
+    }
+  };
+
+  const handleRebook = async (bookingId, newSlotId) => {
+    setActionLoading(true);
+    try {
+      await rebookSameEmployee(bookingId, newSlotId);
+      loadAll();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to rebook");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRefund = async (bookingId) => {
+    setActionLoading(true);
+    try {
+      await apiRequestRefund(bookingId);
+      loadAll();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to process refund");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Helper to fetch a specific employee's open slots for the rebook modal.
+  // Reuses category-based endpoint isn't ideal here — see note below.
+  const getEmployeeSlotsForRebook = async (employeeProfileId) => {
+    try {
+      const res = await getEmployeeOpenSlots(employeeProfileId);
+      return res.data.data;
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to load employee's slots",
+      );
+      return [];
     }
   };
 
@@ -357,6 +544,10 @@ export default function CandidateDashboard() {
                 bookings={bookings}
                 onConfirm={handleConfirmComplete}
                 confirmLoadingId={confirmLoadingId}
+                onRebook={handleRebook}
+                onRefund={handleRefund}
+                actionLoading={actionLoading}
+                getEmployeeSlots={getEmployeeSlotsForRebook}
               />
             )}
           </>
