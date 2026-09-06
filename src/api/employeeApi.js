@@ -14,3 +14,9 @@ export const getEmployeeDashboard = () => api.get("/employee/dashboard");
 
 export const employeeConfirmComplete = (bookingId) =>
   api.post(`/interviews/employee/bookings/${bookingId}/confirm-complete`);
+
+export const cancelBooking = (bookingId, reason) =>
+  api.post(`/interviews/employee/bookings/${bookingId}/cancel`, { reason });
+
+export const postponeBooking = (bookingId, newSlotId) =>
+  api.post(`/interviews/employee/bookings/${bookingId}/postpone`, { newSlotId });

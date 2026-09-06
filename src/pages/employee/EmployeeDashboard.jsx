@@ -7,6 +7,8 @@ import {
   deleteSlot,
   getEmployeeBookings,
   employeeConfirmComplete,
+  cancelBooking,
+  postponeBooking,
 } from "../../api/employeeApi";
 import DashboardHeader from "../../components/DashboardHeader";
 import {
@@ -17,6 +19,7 @@ import {
   Plus,
   Trash2,
   Clock,
+  X,
 } from "lucide-react";
 import EmployeeProfileForm from "./EmployeeProfileForm";
 
@@ -239,65 +242,221 @@ function MySlots({ slots, onCreate, onDelete }) {
   );
 }
 
-function MyBookings({ bookings, onConfirm, confirmLoadingId }) {
+function CancelModal({ booking, onClose, onConfirm, loading }) {
+  const [reason, setReason] = useState("");
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-md">
+        <h3 className="font-semibold text-text-primary mb-3">
+          Cancel this interview?
+        </h3>
+        <p className="text-sm text-text-secondary mb-4">
+          The candidate will get a refund marked pending. This slot cannot be
+          reopened.
+        </p>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Reason for cancellation"
+          rows={3}
+          className="w-full bg-bg-secondary border border-border rounded px-3 py-2 text-sm text-text-primary mb-4 focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="text-sm text-text-secondary px-4 py-2 rounded hover:bg-bg-secondary"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => onConfirm(booking.id, reason)}
+            disabled={loading || !reason.trim()}
+            className="text-sm bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            {loading ? "Cancelling..." : "Confirm Cancel"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PostponeModal({
+  booking,
+  availableSlots,
+  onClose,
+  onConfirm,
+  loading,
+}) {
+  const [selectedSlotId, setSelectedSlotId] = useState("");
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-md">
+        <h3 className="font-semibold text-text-primary mb-3">
+          Postpone to a different slot
+        </h3>
+
+        {availableSlots.length === 0 ? (
+          <p className="text-sm text-text-secondary mb-4">
+            You have no other open slots. Create one first from "My Slots".
+          </p>
+        ) : (
+          <select
+            value={selectedSlotId}
+            onChange={(e) => setSelectedSlotId(e.target.value)}
+            className="w-full bg-bg-secondary border border-border rounded px-3 py-2 text-sm text-text-primary mb-4"
+          >
+            <option value="">Select a new slot</option>
+            {availableSlots.map((s) => (
+              <option key={s.id} value={s.id}>
+                {new Date(s.startTime).toLocaleString()}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="text-sm text-text-secondary px-4 py-2 rounded hover:bg-bg-secondary"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => onConfirm(booking.id, selectedSlotId)}
+            disabled={loading || !selectedSlotId}
+            className="text-sm bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded disabled:opacity-50"
+          >
+            {loading ? "Postponing..." : "Confirm Postpone"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MyBookings({
+  bookings,
+  slots,
+  onConfirm,
+  confirmLoadingId,
+  onCancel,
+  onPostpone,
+  actionLoading,
+}) {
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [postponeTarget, setPostponeTarget] = useState(null);
+
   if (bookings.length === 0) {
     return <p className="text-text-secondary text-sm">No bookings yet.</p>;
   }
 
+  const openSlotsExcludingCurrent = (currentSlotId) =>
+    slots.filter((s) => s.status === "OPEN" && s.id !== currentSlotId);
+
   return (
-    <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-bg-secondary text-text-secondary text-left">
-          <tr>
-            <th className="px-4 py-3 font-medium">Candidate</th>
-            <th className="px-4 py-3 font-medium">Slot</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bookings.map((b) => (
-            <tr key={b.id} className="border-t border-border">
-              <td className="px-4 py-3 text-text-primary">
-                {b.candidateProfile?.user?.name || "—"}
-              </td>
-              <td className="px-4 py-3 text-text-secondary">
-                {new Date(b.slot.startTime).toLocaleString()}
-              </td>
-              <td className="px-4 py-3">
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    b.status === "COMPLETED"
-                      ? "bg-green-500/10 text-green-600"
-                      : b.status === "CONFIRMED"
-                        ? "bg-blue-500/10 text-blue-600"
-                        : "bg-gray-500/10 text-text-secondary"
-                  }`}
-                >
-                  {b.status}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                {b.status === "CONFIRMED" && !b.employeeConfirmedAt && (
-                  <button
-                    onClick={() => onConfirm(b.id)}
-                    disabled={confirmLoadingId === b.id}
-                    className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
-                  >
-                    Confirm Complete
-                  </button>
-                )}
-                {b.employeeConfirmedAt && b.status !== "COMPLETED" && (
-                  <span className="text-xs text-text-secondary">
-                    Waiting for candidate
-                  </span>
-                )}
-              </td>
+    <>
+      <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-bg-secondary text-text-secondary text-left">
+            <tr>
+              <th className="px-4 py-3 font-medium">Candidate</th>
+              <th className="px-4 py-3 font-medium">Slot</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium text-right">Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {bookings.map((b) => (
+              <tr key={b.id} className="border-t border-border">
+                <td className="px-4 py-3 text-text-primary">
+                  {b.candidateProfile?.user?.name || "—"}
+                </td>
+                <td className="px-4 py-3 text-text-secondary">
+                  {new Date(b.slot.startTime).toLocaleString()}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${
+                      b.status === "COMPLETED"
+                        ? "bg-green-500/10 text-green-600"
+                        : b.status === "CONFIRMED"
+                          ? "bg-blue-500/10 text-blue-600"
+                          : b.status === "CANCELLED"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-gray-500/10 text-text-secondary"
+                    }`}
+                  >
+                    {b.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {b.status === "CONFIRMED" && (
+                    <div className="flex gap-2 justify-end flex-wrap">
+                      {!b.employeeConfirmedAt && (
+                        <button
+                          onClick={() => onConfirm(b.id)}
+                          disabled={confirmLoadingId === b.id}
+                          className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                        >
+                          Confirm Complete
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setPostponeTarget(b)}
+                        className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors"
+                      >
+                        <CalendarClock size={12} />
+                        Postpone
+                      </button>
+                      <button
+                        onClick={() => setCancelTarget(b)}
+                        className="flex items-center gap-1 text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded-full transition-colors"
+                      >
+                        <X size={12} />
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                  {b.employeeConfirmedAt && b.status !== "COMPLETED" && (
+                    <span className="text-xs text-text-secondary">
+                      Waiting for candidate
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {cancelTarget && (
+        <CancelModal
+          booking={cancelTarget}
+          onClose={() => setCancelTarget(null)}
+          onConfirm={(id, reason) => {
+            onCancel(id, reason);
+            setCancelTarget(null);
+          }}
+          loading={actionLoading}
+        />
+      )}
+
+      {postponeTarget && (
+        <PostponeModal
+          booking={postponeTarget}
+          availableSlots={openSlotsExcludingCurrent(postponeTarget.slot.id)}
+          onClose={() => setPostponeTarget(null)}
+          onConfirm={(id, newSlotId) => {
+            onPostpone(id, newSlotId);
+            setPostponeTarget(null);
+          }}
+          loading={actionLoading}
+        />
+      )}
+    </>
   );
 }
 
@@ -310,7 +469,10 @@ export default function EmployeeDashboard() {
   const [confirmLoadingId, setConfirmLoadingId] = useState(null);
   const [error, setError] = useState("");
   const [needsProfile, setNeedsProfile] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [isLimitError, setIsLimitError] = useState(false);
 
+  
   const loadAll = async () => {
     try {
       const profileRes = await getEmployeeProfile();
@@ -370,51 +532,96 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const handleCancel = async (bookingId, reason) => {
+    setActionLoading(true);
+    setIsLimitError(false);
+    try {
+      await cancelBooking(bookingId, reason);
+      loadAll();
+    } catch (err) {
+      setIsLimitError(err.response?.status === 429);
+      setError(err.response?.data?.message || "Failed to cancel booking");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePostpone = async (bookingId, newSlotId) => {
+    setActionLoading(true);
+    setIsLimitError(false);
+    try {
+      await postponeBooking(bookingId, newSlotId);
+      loadAll();
+    } catch (err) {
+      setIsLimitError(err.response?.status === 429);
+      setError(err.response?.data?.message || "Failed to postpone booking");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
-  <div className="min-h-screen bg-bg-primary">
-    <DashboardHeader title="Employee Dashboard" />
+    <div className="min-h-screen bg-bg-primary">
+      <DashboardHeader title="Employee Dashboard" />
 
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      {needsProfile ? (
-        <EmployeeProfileForm onComplete={loadAll} />
-      ) : (
-        <>
-          {error && (
-            <div className="mb-6 text-sm text-red-500 bg-red-500/10 border border-red-500/30 rounded px-4 py-3">
-              {error}
-            </div>
-          )}
-
-          <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  activeTab === tab
-                    ? "border-accent text-accent"
-                    : "border-transparent text-text-secondary hover:text-text-primary"
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        {needsProfile ? (
+          <EmployeeProfileForm onComplete={loadAll} />
+        ) : (
+          <>
+            {error && (
+              <div
+                className={`mb-6 text-sm rounded px-4 py-3 border ${
+                  isLimitError
+                    ? "text-yellow-600 bg-yellow-500/10 border-yellow-500/30"
+                    : "text-red-500 bg-red-500/10 border-red-500/30"
                 }`}
               >
-                {tab}
-              </button>
-            ))}
-          </div>
+                {isLimitError ? "⚠ " : ""}
+                {error}
+              </div>
+            )}
 
-          {activeTab === "Overview" && <Overview summary={summary} profile={profile} />}
-          {activeTab === "My Slots" && (
-            <MySlots slots={slots} onCreate={handleCreateSlot} onDelete={handleDeleteSlot} />
-          )}
-          {activeTab === "My Bookings" && (
-            <MyBookings
-              bookings={bookings}
-              onConfirm={handleConfirmComplete}
-              confirmLoadingId={confirmLoadingId}
-            />
-          )}
-        </>
-      )}
+            <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    activeTab === tab
+                      ? "border-accent text-accent"
+                      : "border-transparent text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === "Overview" && (
+              <Overview summary={summary} profile={profile} />
+            )}
+            {activeTab === "My Slots" && (
+              <MySlots
+                slots={slots}
+                onCreate={handleCreateSlot}
+                onDelete={handleDeleteSlot}
+              />
+            )}
+            {activeTab === "My Bookings" && (
+              <MyBookings
+                bookings={bookings}
+                slots={slots}
+                onConfirm={handleConfirmComplete}
+                confirmLoadingId={confirmLoadingId}
+                onCancel={handleCancel}
+                onPostpone={handlePostpone}
+                actionLoading={actionLoading}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
 }
