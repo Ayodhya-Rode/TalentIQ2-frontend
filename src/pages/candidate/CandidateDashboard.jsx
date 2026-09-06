@@ -355,12 +355,16 @@ function MyBookings({
                   >
                     {b.status}
                   </span>
-                  {b.status === "CANCELLED" &&
-                    b.refundStatus === "PROCESSED" && (
-                      <span className="ml-2 text-xs text-green-600">
-                        Refunded
-                      </span>
-                    )}
+                  {b.status === "CANCELLED" && ["PENDING", "FAILED"].includes(b.refundStatus) && (
+  <button
+    onClick={() => onRefund(b.id)}
+    disabled={actionLoading}
+    className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+  >
+    <Wallet size={12} />
+    {b.refundStatus === "FAILED" ? "Retry Refund" : "Request Refund"}
+  </button>
+)}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {b.status === "CONFIRMED" && !b.candidateConfirmedAt && (
