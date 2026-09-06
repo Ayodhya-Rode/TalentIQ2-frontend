@@ -9,7 +9,7 @@ import Footer from "./components/Footer";
 import { useAuth } from "./context/AuthContext";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
-
+import CandidateDashboard from "./pages/candidate/CandidateDashboard";
 
 
 
@@ -29,7 +29,7 @@ function RoleDashboard() {
   
   if (user?.role === "SUPER_ADMIN") return <SuperAdminDashboard />;
   if (user?.role === "EMPLOYEE") return <EmployeeDashboard />;
-
+  if (user?.role === "CANDIDATE") return <CandidateDashboard />;
   // Placeholder until Employee/Candidate dashboards are built
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-primary text-text-primary">
