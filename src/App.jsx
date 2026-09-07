@@ -12,6 +12,7 @@ import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import CandidateDashboard from "./pages/candidate/CandidateDashboard";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import InterviewRoom from "./pages/InterviewRoom";
 
 function PublicLayout({ children }) {
   return (
@@ -98,6 +99,11 @@ export default function App() {
         <Route
           path="*"
           element={<Navigate to={user ? "/dashboard" : "/login"} />}
+        />
+
+        <Route
+          path="/interview-room/:bookingId"
+          element={user ? <InterviewRoom /> : <Navigate to="/login" />}
         />
       </Routes>
     </BrowserRouter>

@@ -15,6 +15,7 @@ import { getCategories } from "../../api/categoryApi";
 import DashboardHeader from "../../components/DashboardHeader";
 import CandidateProfileForm from "./CandidateProfileForm";
 import { CheckCircle2, CalendarClock, Wallet, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const TABS = ["Overview", "Book Interview", "My Bookings"];
 
@@ -325,6 +326,18 @@ function RebookModal({ booking, availableSlots, onClose, onConfirm, loading }) {
   );
 }
 
+const JOIN_WINDOW_BEFORE_MIN = 10;
+
+const canJoinNow = (booking) => {
+  const now = new Date();
+  const startTime = new Date(booking.slot.startTime);
+  const endTime = new Date(booking.slot.endTime);
+  const windowStart = new Date(
+    startTime.getTime() - JOIN_WINDOW_BEFORE_MIN * 60 * 1000,
+  );
+  return now >= windowStart && now <= endTime;
+};
+
 function MyBookings({
   bookings,
   onConfirm,
@@ -334,121 +347,242 @@ function MyBookings({
   actionLoading,
   getEmployeeSlots,
 }) {
+  const navigate = useNavigate();
+
   const [rebookTarget, setRebookTarget] = useState(null);
   const [rebookSlots, setRebookSlots] = useState([]);
+  const [rebookLoading, setRebookLoading] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  // Re-check Join Interview availability every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const canJoinNow = (booking) => {
+    if (!booking?.slot?.startTime || !booking?.slot?.endTime) {
+      return false;
+    }
+
+    const startTime = new Date(booking.slot.startTime);
+    const endTime = new Date(booking.slot.endTime);
+
+    const windowStart = new Date(
+      startTime.getTime() - JOIN_WINDOW_BEFORE_MIN * 60 * 1000,
+    );
+
+    return now >= windowStart && now <= endTime;
+  };
+
+  const openRebookModal = async (booking) => {
+    setRebookLoading(true);
+    setRebookTarget(booking);
+    setRebookSlots([]);
+
+    try {
+      const slots = await getEmployeeSlots(booking.employeeProfile.id);
+
+      const futureSlots = (slots || []).filter(
+        (slot) =>
+          slot.status === "OPEN" && new Date(slot.startTime) > new Date(),
+      );
+
+      setRebookSlots(futureSlots);
+    } finally {
+      setRebookLoading(false);
+    }
+  };
+
+  const handleRebookConfirm = async (bookingId, newSlotId) => {
+    if (!newSlotId) return;
+
+    await onRebook(bookingId, newSlotId);
+
+    setRebookTarget(null);
+    setRebookSlots([]);
+  };
+
+  const handleCloseRebook = () => {
+    if (actionLoading || rebookLoading) return;
+
+    setRebookTarget(null);
+    setRebookSlots([]);
+  };
 
   if (bookings.length === 0) {
     return <p className="text-text-secondary text-sm">No bookings yet.</p>;
   }
 
-  const openRebookModal = async (booking) => {
-    const slots = await getEmployeeSlots(booking.employeeProfile.id);
-    setRebookSlots(slots);
-    setRebookTarget(booking);
-  };
-
   return (
     <>
-      <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[800px] text-sm">
           <thead className="bg-bg-secondary text-text-secondary text-left">
             <tr>
               <th className="px-4 py-3 font-medium">Employee</th>
+
               <th className="px-4 py-3 font-medium">Slot</th>
+
               <th className="px-4 py-3 font-medium">Amount</th>
+
               <th className="px-4 py-3 font-medium">Status</th>
+
               <th className="px-4 py-3 font-medium text-right">Action</th>
             </tr>
           </thead>
+
           <tbody>
-            {bookings.map((b) => (
-              <tr key={b.id} className="border-t border-border">
-                <td className="px-4 py-3 text-text-primary">
-                  {b.employeeProfile?.user?.name || "—"}
-                </td>
-                <td className="px-4 py-3 text-text-secondary">
-                  {new Date(b.slot.startTime).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-text-secondary">₹{b.amount}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      b.status === "COMPLETED"
-                        ? "bg-green-500/10 text-green-600"
-                        : b.status === "CONFIRMED"
-                          ? "bg-blue-500/10 text-blue-600"
-                          : b.status === "CANCELLED"
-                            ? "bg-red-500/10 text-red-500"
-                            : "bg-gray-500/10 text-text-secondary"
-                    }`}
-                  >
-                    {b.status}
-                  </span>
-                  {b.status === "CANCELLED" &&
-                    ["PENDING", "FAILED"].includes(b.refundStatus) && (
-                      <button
-                        onClick={() => onRefund(b.id)}
-                        disabled={actionLoading}
-                        className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+            {bookings.map((booking) => {
+              const joinAllowed = canJoinNow(booking);
+
+              return (
+                <tr key={booking.id} className="border-t border-border">
+                  {/* Employee */}
+                  <td className="px-4 py-3 text-text-primary">
+                    {booking.employeeProfile?.user?.name || "—"}
+                  </td>
+
+                  {/* Slot */}
+                  <td className="px-4 py-3 text-text-secondary">
+                    {booking.slot?.startTime
+                      ? new Date(booking.slot.startTime).toLocaleString()
+                      : "—"}
+                  </td>
+
+                  {/* Amount */}
+                  <td className="px-4 py-3 text-text-secondary">
+                    ₹{booking.amount}
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          booking.status === "COMPLETED"
+                            ? "bg-green-500/10 text-green-600"
+                            : booking.status === "CONFIRMED"
+                              ? "bg-blue-500/10 text-blue-600"
+                              : booking.status === "CANCELLED"
+                                ? "bg-red-500/10 text-red-500"
+                                : "bg-gray-500/10 text-text-secondary"
+                        }`}
                       >
-                        <Wallet size={12} />
-                        {b.refundStatus === "FAILED"
-                          ? "Retry Refund"
-                          : "Request Refund"}
-                      </button>
-                    )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {b.status === "CONFIRMED" && !b.candidateConfirmedAt && (
-                    <button
-                      onClick={() => onConfirm(b.id)}
-                      disabled={confirmLoadingId === b.id}
-                      className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
-                    >
-                      Confirm Complete
-                    </button>
-                  )}
-                  {b.candidateConfirmedAt && b.status !== "COMPLETED" && (
-                    <span className="text-xs text-text-secondary">
-                      Waiting for employee
-                    </span>
-                  )}
-                  {b.status === "CANCELLED" && b.refundStatus === "PENDING" && (
-                    <div className="flex gap-2 justify-end flex-wrap">
-                      <button
-                        onClick={() => openRebookModal(b)}
-                        className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors"
-                      >
-                        <CalendarClock size={12} />
-                        Rebook Same Employee
-                      </button>
-                      <button
-                        onClick={() => onRefund(b.id)}
-                        disabled={actionLoading}
-                        className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
-                      >
-                        <Wallet size={12} />
-                        Request Refund
-                      </button>
+                        {booking.status}
+                      </span>
+
+                      {booking.status === "CANCELLED" &&
+                        booking.refundStatus === "PROCESSED" && (
+                          <span className="text-xs text-green-600">
+                            Refunded
+                          </span>
+                        )}
                     </div>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3 text-right">
+                    {/* CONFIRMED */}
+                    {booking.status === "CONFIRMED" && (
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        {/* Join Interview */}
+                        <button
+                          onClick={() =>
+                            navigate(`/interview-room/${booking.id}`)
+                          }
+                          disabled={!joinAllowed}
+                          title={
+                            joinAllowed
+                              ? "Join interview"
+                              : `Join opens ${JOIN_WINDOW_BEFORE_MIN} minutes before start`
+                          }
+                          className="text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-500/10"
+                        >
+                          Join Interview
+                        </button>
+
+                        {/* Confirm Complete */}
+                        {!booking.candidateConfirmedAt && (
+                          <button
+                            onClick={() => onConfirm(booking.id)}
+                            disabled={confirmLoadingId === booking.id}
+                            className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {confirmLoadingId === booking.id
+                              ? "Confirming..."
+                              : "Confirm Complete"}
+                          </button>
+                        )}
+
+                        {/* Waiting for Employee */}
+                        {booking.candidateConfirmedAt &&
+                          booking.status !== "COMPLETED" && (
+                            <span className="text-xs text-text-secondary px-2 py-1.5">
+                              Waiting for employee
+                            </span>
+                          )}
+                      </div>
+                    )}
+
+                    {/* CANCELLED + PENDING REFUND */}
+                    {booking.status === "CANCELLED" &&
+                      booking.refundStatus === "PENDING" && (
+                        <div className="flex gap-2 justify-end flex-wrap">
+                          <button
+                            onClick={() => openRebookModal(booking)}
+                            disabled={actionLoading || rebookLoading}
+                            className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <CalendarClock size={12} />
+
+                            {rebookLoading && rebookTarget?.id === booking.id
+                              ? "Loading..."
+                              : "Rebook Same Employee"}
+                          </button>
+
+                          <button
+                            onClick={() => onRefund(booking.id)}
+                            disabled={actionLoading}
+                            className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Wallet size={12} />
+                            Request Refund
+                          </button>
+                        </div>
+                      )}
+
+                    {/* CANCELLED + FAILED REFUND */}
+                    {booking.status === "CANCELLED" &&
+                      booking.refundStatus === "FAILED" && (
+                        <button
+                          onClick={() => onRefund(booking.id)}
+                          disabled={actionLoading}
+                          className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                        >
+                          <Wallet size={12} />
+                          Retry Refund
+                        </button>
+                      )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
+      {/* Rebook Modal */}
       {rebookTarget && (
         <RebookModal
           booking={rebookTarget}
           availableSlots={rebookSlots}
-          onClose={() => setRebookTarget(null)}
-          onConfirm={(id, newSlotId) => {
-            onRebook(id, newSlotId);
-            setRebookTarget(null);
-          }}
-          loading={actionLoading}
+          onClose={handleCloseRebook}
+          onConfirm={handleRebookConfirm}
+          loading={actionLoading || rebookLoading}
         />
       )}
     </>
@@ -492,11 +626,13 @@ export default function CandidateDashboard() {
 
   const handleConfirmComplete = async (bookingId) => {
     setConfirmLoadingId(bookingId);
+    setError("");
     try {
       await candidateConfirmComplete(bookingId);
       loadAll();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to confirm completion");
+      toast.error(err.response?.data?.message || "Failed to confirm completion");
     } finally {
       setConfirmLoadingId(null);
     }

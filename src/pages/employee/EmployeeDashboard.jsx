@@ -22,6 +22,8 @@ import {
   X,
 } from "lucide-react";
 import EmployeeProfileForm from "./EmployeeProfileForm";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const TABS = ["Overview", "My Slots", "My Bookings"];
 
@@ -337,6 +339,18 @@ function PostponeModal({
   );
 }
 
+const JOIN_WINDOW_BEFORE_MIN = 10;
+
+const canJoinNow = (booking) => {
+  const now = new Date();
+  const startTime = new Date(booking.slot.startTime);
+  const endTime = new Date(booking.slot.endTime);
+  const windowStart = new Date(
+    startTime.getTime() - JOIN_WINDOW_BEFORE_MIN * 60 * 1000,
+  );
+  return now >= windowStart && now <= endTime;
+};
+
 function MyBookings({
   bookings,
   slots,
@@ -346,113 +360,236 @@ function MyBookings({
   onPostpone,
   actionLoading,
 }) {
+  const navigate = useNavigate();
+
   const [cancelTarget, setCancelTarget] = useState(null);
   const [postponeTarget, setPostponeTarget] = useState(null);
+  const [now, setNow] = useState(new Date());
+
+  // Re-check join availability every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const canJoinNow = (booking) => {
+    if (!booking?.slot?.startTime || !booking?.slot?.endTime) {
+      return false;
+    }
+
+    const startTime = new Date(booking.slot.startTime);
+    const endTime = new Date(booking.slot.endTime);
+
+    const windowStart = new Date(
+      startTime.getTime() - JOIN_WINDOW_BEFORE_MIN * 60 * 1000,
+    );
+
+    return now >= windowStart && now <= endTime;
+  };
+
+  const openSlotsExcludingCurrent = (currentSlotId) => {
+    return slots.filter((slot) => {
+      if (slot.status !== "OPEN") {
+        return false;
+      }
+
+      if (slot.id === currentSlotId) {
+        return false;
+      }
+
+      if (!slot.startTime) {
+        return false;
+      }
+
+      // Only allow future slots for postponement
+      return new Date(slot.startTime) > now;
+    });
+  };
+
+  const handleCancelConfirm = async (bookingId, reason) => {
+    try {
+      await onCancel(bookingId, reason);
+      setCancelTarget(null);
+    } catch {
+      // Parent already handles and displays the error
+    }
+  };
+
+  const handlePostponeConfirm = async (bookingId, newSlotId) => {
+    try {
+      await onPostpone(bookingId, newSlotId);
+      setPostponeTarget(null);
+    } catch {
+      // Parent already handles and displays the error
+    }
+  };
 
   if (bookings.length === 0) {
     return <p className="text-text-secondary text-sm">No bookings yet.</p>;
   }
 
-  const openSlotsExcludingCurrent = (currentSlotId) =>
-    slots.filter((s) => s.status === "OPEN" && s.id !== currentSlotId);
-
   return (
     <>
-      <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      {/* Bookings Table */}
+      <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[750px] text-sm">
           <thead className="bg-bg-secondary text-text-secondary text-left">
             <tr>
               <th className="px-4 py-3 font-medium">Candidate</th>
+
               <th className="px-4 py-3 font-medium">Slot</th>
+
               <th className="px-4 py-3 font-medium">Status</th>
+
               <th className="px-4 py-3 font-medium text-right">Action</th>
             </tr>
           </thead>
+
           <tbody>
-            {bookings.map((b) => (
-              <tr key={b.id} className="border-t border-border">
-                <td className="px-4 py-3 text-text-primary">
-                  {b.candidateProfile?.user?.name || "—"}
-                </td>
-                <td className="px-4 py-3 text-text-secondary">
-                  {new Date(b.slot.startTime).toLocaleString()}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      b.status === "COMPLETED"
-                        ? "bg-green-500/10 text-green-600"
-                        : b.status === "CONFIRMED"
-                          ? "bg-blue-500/10 text-blue-600"
-                          : b.status === "CANCELLED"
-                            ? "bg-red-500/10 text-red-500"
-                            : "bg-gray-500/10 text-text-secondary"
-                    }`}
-                  >
-                    {b.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {b.status === "CONFIRMED" && (
-                    <div className="flex gap-2 justify-end flex-wrap">
-                      {!b.employeeConfirmedAt && (
-                        <button
-                          onClick={() => onConfirm(b.id)}
-                          disabled={confirmLoadingId === b.id}
-                          className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
-                        >
-                          Confirm Complete
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setPostponeTarget(b)}
-                        className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors"
-                      >
-                        <CalendarClock size={12} />
-                        Postpone
-                      </button>
-                      <button
-                        onClick={() => setCancelTarget(b)}
-                        className="flex items-center gap-1 text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded-full transition-colors"
-                      >
-                        <X size={12} />
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                  {b.employeeConfirmedAt && b.status !== "COMPLETED" && (
-                    <span className="text-xs text-text-secondary">
-                      Waiting for candidate
+            {bookings.map((booking) => {
+              const joinAllowed = canJoinNow(booking);
+
+              const availableSlots = openSlotsExcludingCurrent(
+                booking.slot?.id,
+              );
+
+              return (
+                <tr key={booking.id} className="border-t border-border">
+                  {/* Candidate */}
+                  <td className="px-4 py-3 text-text-primary">
+                    {booking.candidateProfile?.user?.name || "—"}
+                  </td>
+
+                  {/* Slot */}
+                  <td className="px-4 py-3 text-text-secondary">
+                    {booking.slot?.startTime
+                      ? new Date(booking.slot.startTime).toLocaleString()
+                      : "—"}
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-4 py-3">
+                    <span
+                      className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        booking.status === "COMPLETED"
+                          ? "bg-green-500/10 text-green-600"
+                          : booking.status === "CONFIRMED"
+                            ? "bg-blue-500/10 text-blue-600"
+                            : booking.status === "CANCELLED"
+                              ? "bg-red-500/10 text-red-500"
+                              : "bg-gray-500/10 text-text-secondary"
+                      }`}
+                    >
+                      {booking.status}
                     </span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3 text-right">
+                    {booking.status === "CONFIRMED" && (
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        {/* Join Interview */}
+                        <button
+                          onClick={() =>
+                            navigate(`/interview-room/${booking.id}`)
+                          }
+                          disabled={!joinAllowed}
+                          title={
+                            joinAllowed
+                              ? "Join interview"
+                              : `Join opens ${JOIN_WINDOW_BEFORE_MIN} minutes before start`
+                          }
+                          className="text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-500/10"
+                        >
+                          Join Interview
+                        </button>
+
+                        {/* Confirm Complete */}
+                        {!booking.employeeConfirmedAt && (
+                          <button
+                            onClick={() => onConfirm(booking.id)}
+                            disabled={confirmLoadingId === booking.id}
+                            className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {confirmLoadingId === booking.id
+                              ? "Confirming..."
+                              : "Confirm Complete"}
+                          </button>
+                        )}
+
+                        {/* Waiting for Candidate */}
+                        {booking.employeeConfirmedAt &&
+                          booking.status !== "COMPLETED" && (
+                            <span className="text-xs text-text-secondary px-2 py-1.5">
+                              Waiting for candidate
+                            </span>
+                          )}
+
+                        {/* Postpone */}
+                        <button
+                          onClick={() => setPostponeTarget(booking)}
+                          disabled={actionLoading}
+                          className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <CalendarClock size={12} />
+                          Postpone
+                        </button>
+
+                        {/* Cancel */}
+                        <button
+                          onClick={() => setCancelTarget(booking)}
+                          disabled={actionLoading}
+                          className="flex items-center gap-1 text-xs font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <X size={12} />
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Employee already confirmed */}
+                    {booking.employeeConfirmedAt &&
+                      booking.status !== "COMPLETED" && (
+                        <span className="text-xs text-text-secondary">
+                          Waiting for candidate
+                        </span>
+                      )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
+      {/* Cancel Modal */}
       {cancelTarget && (
         <CancelModal
           booking={cancelTarget}
-          onClose={() => setCancelTarget(null)}
-          onConfirm={(id, reason) => {
-            onCancel(id, reason);
-            setCancelTarget(null);
+          onClose={() => {
+            if (!actionLoading) {
+              setCancelTarget(null);
+            }
           }}
+          onConfirm={handleCancelConfirm}
           loading={actionLoading}
         />
       )}
 
+      {/* Postpone Modal */}
       {postponeTarget && (
         <PostponeModal
           booking={postponeTarget}
-          availableSlots={openSlotsExcludingCurrent(postponeTarget.slot.id)}
-          onClose={() => setPostponeTarget(null)}
-          onConfirm={(id, newSlotId) => {
-            onPostpone(id, newSlotId);
-            setPostponeTarget(null);
+          availableSlots={openSlotsExcludingCurrent(postponeTarget.slot?.id)}
+          onClose={() => {
+            if (!actionLoading) {
+              setPostponeTarget(null);
+            }
           }}
+          onConfirm={handlePostponeConfirm}
           loading={actionLoading}
         />
       )}
@@ -472,7 +609,6 @@ export default function EmployeeDashboard() {
   const [actionLoading, setActionLoading] = useState(false);
   const [isLimitError, setIsLimitError] = useState(false);
 
-  
   const loadAll = async () => {
     try {
       const profileRes = await getEmployeeProfile();
@@ -527,6 +663,7 @@ export default function EmployeeDashboard() {
       loadAll();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to confirm completion");
+       toast.error(err.response?.data?.message || "Failed to confirm completion");
     } finally {
       setConfirmLoadingId(null);
     }
