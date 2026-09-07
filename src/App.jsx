@@ -13,6 +13,9 @@ import CandidateDashboard from "./pages/candidate/CandidateDashboard";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InterviewRoom from "./pages/InterviewRoom";
+import ForgotPassword from "./pages/ForgotPassword";
+import VerifyOtp from "./pages/VerifyOtp";
+import ResetPassword from "./pages/ResetPassword";
 
 function PublicLayout({ children }) {
   return (
@@ -105,6 +108,10 @@ export default function App() {
           path="/interview-room/:bookingId"
           element={user ? <InterviewRoom /> : <Navigate to="/login" />}
         />
+
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     </BrowserRouter>
   );
