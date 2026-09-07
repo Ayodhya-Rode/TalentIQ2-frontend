@@ -10,9 +10,8 @@ import { useAuth } from "./context/AuthContext";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import CandidateDashboard from "./pages/candidate/CandidateDashboard";
-
-
-
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function PublicLayout({ children }) {
   return (
@@ -26,7 +25,7 @@ function PublicLayout({ children }) {
 
 function RoleDashboard() {
   const { user } = useAuth();
-  
+
   if (user?.role === "SUPER_ADMIN") return <SuperAdminDashboard />;
   if (user?.role === "EMPLOYEE") return <EmployeeDashboard />;
   if (user?.role === "CANDIDATE") return <CandidateDashboard />;
@@ -51,14 +50,55 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar
+        closeOnClick
+        pauseOnHover
+        theme="dark"
+      />
       <Routes>
-        <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-        <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
-        <Route path="/how-it-works" element={<PublicLayout><HowItWorks /></PublicLayout>} />
-        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-        <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
-        <Route path="/dashboard" element={user ?  <RoleDashboard /> : <Navigate to="/login" />} />
-        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
+        <Route
+          path="/"
+          element={
+            <PublicLayout>
+              <Home />
+            </PublicLayout>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <PublicLayout>
+              <About />
+            </PublicLayout>
+          }
+        />
+        <Route
+          path="/how-it-works"
+          element={
+            <PublicLayout>
+              <HowItWorks />
+            </PublicLayout>
+          }
+        />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/dashboard" /> : <Login />}
+        />
+        <Route
+          path="/register"
+          element={user ? <Navigate to="/dashboard" /> : <Register />}
+        />
+        <Route
+          path="/dashboard"
+          element={user ? <RoleDashboard /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="*"
+          element={<Navigate to={user ? "/dashboard" : "/login"} />}
+        />
       </Routes>
     </BrowserRouter>
   );
