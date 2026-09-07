@@ -4,13 +4,19 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useForm } from "react-hook-form";
 
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
-
   const { login } = useAuth();
 
   const [error, setError] = useState("");
@@ -37,7 +43,6 @@ export default function Login() {
       await login(data.email, data.password);
 
       reset();
-
       navigate("/dashboard");
     } catch (err) {
       const message = err.response?.data?.message || "Login failed";
@@ -137,6 +142,16 @@ export default function Login() {
 
         {/* Login Section */}
         <div className="p-6 sm:p-8 lg:p-12">
+          {/* Back to Home */}
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6"
+          >
+            <ArrowLeft size={16} />
+            Back to Home
+          </button>
+
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
             <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-white font-bold">
@@ -241,9 +256,15 @@ export default function Login() {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={
+                    showPassword ? "Hide password" : "Show password"
+                  }
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
                 </button>
               </div>
 
@@ -281,8 +302,13 @@ export default function Login() {
               Create an account
             </Link>
           </p>
+
+          {/* Forgot Password */}
           <p className="text-sm text-text-secondary mt-6 text-center">
-            <Link to="/forgot-password" className="text-accent font-medium hover:underline">
+            <Link
+              to="/forgot-password"
+              className="text-accent font-medium hover:underline"
+            >
               Forgot password?
             </Link>
           </p>

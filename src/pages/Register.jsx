@@ -1,7 +1,5 @@
 import { useState } from "react";
-
 import { Link, useNavigate } from "react-router-dom";
-
 import { useForm } from "react-hook-form";
 
 import {
@@ -12,6 +10,7 @@ import {
   EyeOff,
   Briefcase,
   ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 
 import { toast } from "react-toastify";
@@ -47,7 +46,7 @@ export default function Register() {
       await registerUser(data);
 
       toast.success(
-        "Registration successful! Waiting for Super Admin approval.",
+        "Registration successful! Waiting for Super Admin approval."
       );
 
       setTimeout(() => {
@@ -68,8 +67,10 @@ export default function Register() {
       <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
 
       <div className="relative w-full max-w-5xl grid lg:grid-cols-2 bg-bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
+
         {/* Left Branding Section */}
         <div className="hidden lg:flex flex-col justify-center p-12 bg-bg-secondary border-r border-border">
+
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white font-bold text-sm tracking-tight">
@@ -95,6 +96,7 @@ export default function Register() {
 
           {/* Features */}
           <div className="mt-10 space-y-4">
+
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                 ✓
@@ -124,11 +126,23 @@ export default function Register() {
                 Practice and improve your interview skills
               </span>
             </div>
+
           </div>
         </div>
 
         {/* Register Section */}
         <div className="p-6 sm:p-8 lg:p-10">
+
+          {/* Back to Home */}
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors mb-6"
+          >
+            <ArrowLeft size={16} />
+            Back to Home
+          </button>
+
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-7">
             <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-xs tracking-tight">
@@ -159,6 +173,7 @@ export default function Register() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1.5">
@@ -262,9 +277,15 @@ export default function Register() {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={
+                    showPassword ? "Hide password" : "Show password"
+                  }
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
                 </button>
               </div>
 
