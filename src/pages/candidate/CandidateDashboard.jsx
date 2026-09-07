@@ -14,12 +14,7 @@ import {
 import { getCategories } from "../../api/categoryApi";
 import DashboardHeader from "../../components/DashboardHeader";
 import CandidateProfileForm from "./CandidateProfileForm";
-import {
-  CheckCircle2,
-  CalendarClock,
-  Wallet,
-  Clock,
-} from "lucide-react";
+import { CheckCircle2, CalendarClock, Wallet, Clock } from "lucide-react";
 
 const TABS = ["Overview", "Book Interview", "My Bookings"];
 
@@ -208,8 +203,42 @@ function BookInterview({ onBookingConfirmed }) {
                 </p>
                 <p className="text-sm text-text-secondary">
                   {emp.designation || "—"}
+                  {emp.company ? ` at ${emp.company}` : ""}
                 </p>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mb-4 text-xs text-text-secondary">
+              {emp.experience && (
+                <p>
+                  <span className="text-text-primary font-medium">
+                    Experience:
+                  </span>{" "}
+                  {emp.experience}
+                </p>
+              )}
+              {emp.location && (
+                <p>
+                  <span className="text-text-primary font-medium">
+                    Location:
+                  </span>{" "}
+                  {emp.location}
+                </p>
+              )}
+              {emp.education && (
+                <p>
+                  <span className="text-text-primary font-medium">
+                    Education:
+                  </span>{" "}
+                  {emp.education}
+                </p>
+              )}
+              {emp.skills && (
+                <p>
+                  <span className="text-text-primary font-medium">Skills:</span>{" "}
+                  {emp.skills}
+                </p>
+              )}
             </div>
 
             {emp.slots.length === 0 ? (
@@ -355,16 +384,19 @@ function MyBookings({
                   >
                     {b.status}
                   </span>
-                  {b.status === "CANCELLED" && ["PENDING", "FAILED"].includes(b.refundStatus) && (
-  <button
-    onClick={() => onRefund(b.id)}
-    disabled={actionLoading}
-    className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
-  >
-    <Wallet size={12} />
-    {b.refundStatus === "FAILED" ? "Retry Refund" : "Request Refund"}
-  </button>
-)}
+                  {b.status === "CANCELLED" &&
+                    ["PENDING", "FAILED"].includes(b.refundStatus) && (
+                      <button
+                        onClick={() => onRefund(b.id)}
+                        disabled={actionLoading}
+                        className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                      >
+                        <Wallet size={12} />
+                        {b.refundStatus === "FAILED"
+                          ? "Retry Refund"
+                          : "Request Refund"}
+                      </button>
+                    )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {b.status === "CONFIRMED" && !b.candidateConfirmedAt && (

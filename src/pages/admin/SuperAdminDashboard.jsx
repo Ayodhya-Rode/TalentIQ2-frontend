@@ -5,6 +5,7 @@ import {
   approveUser,
   rejectUser,
   getAllUsers,
+  getCancellationWarnings,
 } from "../../api/superAdminApi";
 import {
   getCategories,
@@ -26,7 +27,13 @@ import {
   Pencil,
 } from "lucide-react";
 
-const TABS = ["Overview", "Pending Approvals", "All Users", "Categories"];
+const TABS = [
+  "Overview",
+  "Pending Approvals",
+  "All Users",
+  "Categories",
+  "Cancellation Warnings",
+];
 
 function SummaryCard({ icon: Icon, label, value }) {
   return (
@@ -48,10 +55,20 @@ function Overview({ summary }) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Platform Summary</h2>
+        <h2 className="text-lg font-semibold text-text-primary mb-4">
+          Platform Summary
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SummaryCard icon={Clock} label="Pending Approvals" value={summary.pendingApprovals} />
-          <SummaryCard icon={Layers} label="Total Categories" value={summary.totalCategories} />
+          <SummaryCard
+            icon={Clock}
+            label="Pending Approvals"
+            value={summary.pendingApprovals}
+          />
+          <SummaryCard
+            icon={Layers}
+            label="Total Categories"
+            value={summary.totalCategories}
+          />
           <SummaryCard
             icon={CheckCircle2}
             label="Completed Interviews"
@@ -76,30 +93,63 @@ function Overview({ summary }) {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Rejected Accounts</h2>
+        <h2 className="text-lg font-semibold text-text-primary mb-4">
+          Rejected Accounts
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SummaryCard icon={XCircle} label="Rejected Employees" value={summary.rejectedAccounts?.EMPLOYEE ?? 0} />
-          <SummaryCard icon={XCircle} label="Rejected Candidates" value={summary.rejectedAccounts?.CANDIDATE ?? 0} />
-          <SummaryCard icon={XCircle} label="Rejected Recruiters" value={summary.rejectedAccounts?.RECRUITER ?? 0} />
+          <SummaryCard
+            icon={XCircle}
+            label="Rejected Employees"
+            value={summary.rejectedAccounts?.EMPLOYEE ?? 0}
+          />
+          <SummaryCard
+            icon={XCircle}
+            label="Rejected Candidates"
+            value={summary.rejectedAccounts?.CANDIDATE ?? 0}
+          />
+          <SummaryCard
+            icon={XCircle}
+            label="Rejected Recruiters"
+            value={summary.rejectedAccounts?.RECRUITER ?? 0}
+          />
         </div>
       </div>
 
       <div className="bg-bg-card border border-border rounded-xl p-6">
-        <h3 className="font-semibold text-text-primary mb-3">Platform Guidelines</h3>
+        <h3 className="font-semibold text-text-primary mb-3">
+          Platform Guidelines
+        </h3>
         <ul className="text-sm text-text-secondary space-y-2 list-disc list-inside">
-          <li>Candidates can book up to 3 slots per week with the same employee.</li>
+          <li>
+            Candidates can book up to 3 slots per week with the same employee.
+          </li>
           <li>Candidates can only book slots within the next 7 days.</li>
-          <li>Booking fee is a flat ₹100; employee payout is ₹50 per completed interview.</li>
-          <li>Interview confirmation must happen within 24 hours of the slot's end time.</li>
+          <li>
+            Booking fee is a flat ₹100; employee payout is ₹50 per completed
+            interview.
+          </li>
+          <li>
+            Interview confirmation must happen within 24 hours of the slot's end
+            time.
+          </li>
         </ul>
       </div>
     </div>
   );
 }
 
-function PendingApprovals({ pendingUsers, onApprove, onReject, actionLoadingId }) {
+function PendingApprovals({
+  pendingUsers,
+  onApprove,
+  onReject,
+  actionLoadingId,
+}) {
   if (pendingUsers.length === 0) {
-    return <p className="text-text-secondary text-sm">No pending approvals right now.</p>;
+    return (
+      <p className="text-text-secondary text-sm">
+        No pending approvals right now.
+      </p>
+    );
   }
 
   return (
@@ -192,8 +242,8 @@ function AllUsers({ users, roleFilter, setRoleFilter }) {
                       u.status === "APPROVED"
                         ? "bg-green-500/10 text-green-600"
                         : u.status === "REJECTED"
-                        ? "bg-red-500/10 text-red-500"
-                        : "bg-yellow-500/10 text-yellow-600"
+                          ? "bg-red-500/10 text-red-500"
+                          : "bg-yellow-500/10 text-yellow-600"
                     }`}
                   >
                     {u.status}
@@ -204,6 +254,49 @@ function AllUsers({ users, roleFilter, setRoleFilter }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function CancellationWarnings({ warnings }) {
+  if (warnings.length === 0) {
+    return (
+      <p className="text-text-secondary text-sm">
+        No employees have hit the monthly limit.
+      </p>
+    );
+  }
+
+  return (
+    <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-bg-secondary text-text-secondary text-left">
+          <tr>
+            <th className="px-4 py-3 font-medium">Name</th>
+            <th className="px-4 py-3 font-medium">Email</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium text-right">
+              Cancellations this month
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {warnings.map((w) => (
+            <tr key={w.employeeProfileId} className="border-t border-border">
+              <td className="px-4 py-3 text-text-primary">{w.name}</td>
+              <td className="px-4 py-3 text-text-secondary">{w.email}</td>
+              <td className="px-4 py-3">
+                <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-600">
+                  {w.status}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-right font-medium text-red-500">
+                {w.cancellationsThisMonth}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -251,7 +344,10 @@ function Categories({ categories, onCreate, onUpdate, onDelete }) {
 
       <div className="bg-bg-card border border-border rounded-xl divide-y divide-border">
         {categories.map((cat) => (
-          <div key={cat.id} className="flex items-center justify-between px-4 py-3">
+          <div
+            key={cat.id}
+            className="flex items-center justify-between px-4 py-3"
+          >
             {editingId === cat.id ? (
               <input
                 type="text"
@@ -304,6 +400,7 @@ export default function SuperAdminDashboard() {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [error, setError] = useState("");
+  const [cancellationWarnings, setCancellationWarnings] = useState([]);
 
   const loadAll = async () => {
     try {
@@ -324,13 +421,28 @@ export default function SuperAdminDashboard() {
     loadAll();
   }, []);
 
+  // Load all users when the "All Users" tab is active or when the role filter changes
   useEffect(() => {
     if (activeTab !== "All Users") return;
     const params = roleFilter === "ALL" ? {} : { role: roleFilter };
     getAllUsers(params)
       .then((res) => setAllUsers(res.data.data))
-      .catch((err) => setError(err.response?.data?.message || "Failed to load users"));
+      .catch((err) =>
+        setError(err.response?.data?.message || "Failed to load users"),
+      );
   }, [activeTab, roleFilter]);
+
+  // Load cancellation warnings when the "Cancellation Warnings" tab is active
+  useEffect(() => {
+    if (activeTab !== "Cancellation Warnings") return;
+    getCancellationWarnings()
+      .then((res) => setCancellationWarnings(res.data.data))
+      .catch((err) =>
+        setError(
+          err.response?.data?.message || "Failed to load cancellation warnings",
+        ),
+      );
+  }, [activeTab]);
 
   const handleApprove = async (id) => {
     setActionLoadingId(id);
@@ -370,7 +482,9 @@ export default function SuperAdminDashboard() {
   const handleUpdateCategory = async (id, name) => {
     try {
       const res = await updateCategory(id, { name });
-      setCategories((prev) => prev.map((c) => (c.id === id ? res.data.data : c)));
+      setCategories((prev) =>
+        prev.map((c) => (c.id === id ? res.data.data : c)),
+      );
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update category");
     }
@@ -426,9 +540,15 @@ export default function SuperAdminDashboard() {
             actionLoadingId={actionLoadingId}
           />
         )}
+        
         {activeTab === "All Users" && (
-          <AllUsers users={allUsers} roleFilter={roleFilter} setRoleFilter={setRoleFilter} />
+          <AllUsers
+            users={allUsers}
+            roleFilter={roleFilter}
+            setRoleFilter={setRoleFilter}
+          />
         )}
+
         {activeTab === "Categories" && (
           <Categories
             categories={categories}
@@ -436,6 +556,10 @@ export default function SuperAdminDashboard() {
             onUpdate={handleUpdateCategory}
             onDelete={handleDeleteCategory}
           />
+        )}
+
+        {activeTab === "Cancellation Warnings" && (
+          <CancellationWarnings warnings={cancellationWarnings} />
         )}
       </div>
     </div>
