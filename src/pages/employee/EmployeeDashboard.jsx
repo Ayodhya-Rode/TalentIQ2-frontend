@@ -24,6 +24,7 @@ import {
 import EmployeeProfileForm from "./EmployeeProfileForm";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { setDayOffline } from "../../api/employeeApi";
 
 const TABS = ["Overview", "My Slots", "My Bookings"];
 
@@ -110,7 +111,7 @@ function Overview({ summary, profile }) {
   );
 }
 
-function MySlots({ slots, onCreate, onDelete }) {
+function MySlots({ slots, onCreate, onDelete, onRefresh  }) {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -145,6 +146,7 @@ function MySlots({ slots, onCreate, onDelete }) {
 
   return (
     <div>
+       <DayOfflineForm onDone={onRefresh} />
       <form
         onSubmit={handleSubmit}
         className="bg-bg-card border border-border rounded-xl p-5 mb-6 flex flex-wrap items-end gap-4"
@@ -597,6 +599,60 @@ function MyBookings({
   );
 }
 
+function DayOfflineForm({ onDone }) {
+  const [date, setDate] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!date) {
+      toast.error("Pick a date first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await setDayOffline(date);
+      toast.success(res.data.message, { autoClose: 4000 });
+      onDone();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to set day offline");
+    } finally {
+      setLoading(false);
+      setDate("");
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-bg-card border border-border rounded-xl p-5 mb-4 flex flex-wrap items-end gap-4"
+    >
+      <div>
+        <label className="block text-xs text-text-secondary mb-1">
+          Mark a whole day offline
+        </label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="bg-bg-secondary border border-border rounded px-3 py-2 text-sm text-text-primary"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="text-sm font-medium bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-2 rounded transition-colors disabled:opacity-50"
+      >
+        {loading ? "Processing..." : "Set Day Offline"}
+      </button>
+      <p className="text-xs text-text-secondary w-full">
+        Hides all your open slots for that day. Already-booked slots are never affected — no monthly limit applies here.
+      </p>
+    </form>
+  );
+}
+
 export default function EmployeeDashboard() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [summary, setSummary] = useState(null);
@@ -743,6 +799,7 @@ export default function EmployeeDashboard() {
                 slots={slots}
                 onCreate={handleCreateSlot}
                 onDelete={handleDeleteSlot}
+                onRefresh={loadAll}
               />
             )}
             {activeTab === "My Bookings" && (

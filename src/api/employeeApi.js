@@ -20,3 +20,5 @@ export const cancelBooking = (bookingId, reason) =>
 
 export const postponeBooking = (bookingId, newSlotId) =>
   api.post(`/interviews/employee/bookings/${bookingId}/postpone`, { newSlotId });
+
+export const setDayOffline = (date) => api.post("/employee/day-offline", { date });
