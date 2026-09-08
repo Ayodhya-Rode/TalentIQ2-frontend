@@ -424,7 +424,7 @@ export default function SuperAdminDashboard() {
   // Load all users when the "All Users" tab is active or when the role filter changes
   useEffect(() => {
     if (activeTab !== "All Users") return;
-    const params = roleFilter === "ALL" ? {} : { role: roleFilter };
+    const params = { status: "APPROVED", ...(roleFilter !== "ALL" && { role: roleFilter }) };
     getAllUsers(params)
       .then((res) => setAllUsers(res.data.data))
       .catch((err) =>
