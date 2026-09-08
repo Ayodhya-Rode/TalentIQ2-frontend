@@ -26,6 +26,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { setDayOffline } from "../../api/employeeApi";
 import EditEmployeeProfile from "./EditEmployeeProfile";
+import FeedbackModal from "./FeedbackModal";
+import ViewEmployeeProfile from "./ViewEmployeeProfile";
 
 const TABS = ["Overview", "My Slots", "My Bookings"];
 
@@ -45,6 +47,8 @@ function SummaryCard({ icon: Icon, label, value }) {
 
 function Overview({ summary, profile, onProfileUpdated }) {
   const [editing, setEditing] = useState(false);
+  const [viewing, setViewing] = useState(false);
+
   if (!summary) return null;
 
   const profileIncomplete =
@@ -54,13 +58,25 @@ function Overview({ summary, profile, onProfileUpdated }) {
     <div className="space-y-8">
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">Your Stats</h2>
-          <button
-            onClick={() => setEditing(true)}
-            className="text-sm font-medium text-accent hover:underline"
-          >
-            Edit Profile
-          </button>
+          <h2 className="text-lg font-semibold text-text-primary">
+            Your Stats
+          </h2>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setViewing(true)}
+              className="text-sm font-medium text-text-secondary hover:text-text-primary"
+            >
+              View Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              Edit Profile
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -92,6 +108,7 @@ function Overview({ summary, profile, onProfileUpdated }) {
             onUpdated={onProfileUpdated}
           />
         )}
+        {viewing && <ViewEmployeeProfile onClose={() => setViewing(false)} />}
       </div>
 
       {profileIncomplete && (
@@ -107,10 +124,20 @@ function Overview({ summary, profile, onProfileUpdated }) {
           Employee Guidelines
         </h3>
         <ul className="text-sm text-text-secondary space-y-2 list-disc list-inside">
-          <li>You earn ₹50 for every interview marked complete by both sides.</li>
-          <li>You can only confirm an interview as complete after its scheduled start time.</li>
-          <li>Confirmation must happen within 24 hours of the slot's end time, or it expires.</li>
-          <li>Candidates can see and book your open slots up to 7 days in advance.</li>
+          <li>
+            You earn ₹50 for every interview marked complete by both sides.
+          </li>
+          <li>
+            You can only confirm an interview as complete after its scheduled
+            start time.
+          </li>
+          <li>
+            Confirmation must happen within 24 hours of the slot's end time, or
+            it expires.
+          </li>
+          <li>
+            Candidates can see and book your open slots up to 7 days in advance.
+          </li>
         </ul>
       </div>
     </div>
@@ -373,6 +400,7 @@ function MyBookings({
   const [cancelTarget, setCancelTarget] = useState(null);
   const [postponeTarget, setPostponeTarget] = useState(null);
   const [now, setNow] = useState(new Date());
+  const [feedbackTarget, setFeedbackTarget] = useState(null);
 
   // Re-check join availability every 30 seconds
   useEffect(() => {
@@ -529,12 +557,11 @@ function MyBookings({
                         )}
 
                         {/* Waiting for Candidate */}
-                        {booking.employeeConfirmedAt &&
-                          booking.status !== "COMPLETED" && (
-                            <span className="text-xs text-text-secondary px-2 py-1.5">
-                              Waiting for candidate
-                            </span>
-                          )}
+                        {booking.employeeConfirmedAt && (
+                          <span className="text-xs text-text-secondary px-2 py-1.5">
+                            Waiting for candidate
+                          </span>
+                        )}
 
                         {/* Postpone */}
                         <button
@@ -558,13 +585,21 @@ function MyBookings({
                       </div>
                     )}
 
-                    {/* Employee already confirmed */}
-                    {booking.employeeConfirmedAt &&
-                      booking.status !== "COMPLETED" && (
-                        <span className="text-xs text-text-secondary">
-                          Waiting for candidate
-                        </span>
+                    {/* Feedback — separate condition, only for COMPLETED bookings */}
+                    {booking.status === "COMPLETED" &&
+                      !booking.feedbackGivenAt && (
+                        <button
+                          onClick={() => setFeedbackTarget(booking)}
+                          className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors"
+                        >
+                          Give Feedback
+                        </button>
                       )}
+                    {booking.feedbackGivenAt && (
+                      <span className="text-xs text-text-secondary">
+                        Feedback: {booking.score}/10
+                      </span>
+                    )}
                   </td>
                 </tr>
               );
@@ -599,6 +634,15 @@ function MyBookings({
           }}
           onConfirm={handlePostponeConfirm}
           loading={actionLoading}
+        />
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackTarget && (
+        <FeedbackModal
+          booking={feedbackTarget}
+          onClose={() => setFeedbackTarget(null)}
+          onSubmitted={() => setFeedbackTarget(null)}
         />
       )}
     </>

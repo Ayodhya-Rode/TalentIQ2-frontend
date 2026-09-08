@@ -31,3 +31,5 @@ export const requestRefund = (bookingId) =>
 
 export const getEmployeeOpenSlots = (employeeProfileId) =>
   api.get(`/candidate/bookings/employee/${employeeProfileId}/slots`);
+
+export const getCandidateProfileView = () => api.get("/candidate/profile-view");

@@ -16,7 +16,9 @@ import DashboardHeader from "../../components/DashboardHeader";
 import CandidateProfileForm from "./CandidateProfileForm";
 import { CheckCircle2, CalendarClock, Wallet, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import EditCandidateProfile from "./EditCandidateProfile";
+import ViewCandidateProfile from "./ViewCandidateProfile";
 
 const TABS = ["Overview", "Book Interview", "My Bookings"];
 
@@ -36,33 +38,51 @@ function SummaryCard({ icon: Icon, label, value }) {
 
 function Overview({ summary, onProfileUpdated }) {
   const [editing, setEditing] = useState(false);
+  const [viewing, setViewing] = useState(false);
 
   if (!summary) return null;
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-start">
-        <h2 className="text-lg font-semibold text-text-primary">Your Stats</h2>
-        <button
-          onClick={() => setEditing(true)}
-          className="text-sm font-medium text-accent hover:underline"
-        >
-          Edit Profile
-        </button>
-      </div>
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">Your Stats</h2>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setViewing(true)}
+              className="text-sm font-medium text-text-secondary hover:text-text-primary"
+            >
+              View Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              Edit Profile
+            </button>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard
-          icon={CheckCircle2}
-          label="Interviews Attended"
-          value={summary.totalInterviewsAttended}
-        />
-        <SummaryCard
-          icon={CalendarClock}
-          label="Upcoming Interviews"
-          value={summary.upcomingConfirmedInterviews}
-        />
-        <SummaryCard icon={Wallet} label="Total Paid" value={`₹${summary.totalAmountPaid}`} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <SummaryCard
+            icon={CheckCircle2}
+            label="Interviews Attended"
+            value={summary.totalInterviewsAttended}
+          />
+          <SummaryCard
+            icon={CalendarClock}
+            label="Upcoming Interviews"
+            value={summary.upcomingConfirmedInterviews}
+          />
+          <SummaryCard icon={Wallet} label="Total Paid" value={`₹${summary.totalAmountPaid}`} />
+        </div>
+
+        {editing && (
+          <EditCandidateProfile onClose={() => setEditing(false)} onUpdated={onProfileUpdated} />
+        )}
+        {viewing && <ViewCandidateProfile onClose={() => setViewing(false)} />}
       </div>
 
       <div className="bg-bg-card border border-border rounded-xl p-6">
@@ -74,10 +94,6 @@ function Overview({ summary, onProfileUpdated }) {
           <li>Confirm your interview as complete once it happens — both sides must confirm.</li>
         </ul>
       </div>
-
-      {editing && (
-        <EditCandidateProfile onClose={() => setEditing(false)} onUpdated={onProfileUpdated} />
-      )}
     </div>
   );
 }
@@ -120,8 +136,7 @@ function BookInterview({ onBookingConfirmed }) {
 
     try {
       const orderRes = await createBookingOrder({ slotId });
-      const { bookingId, razorpayOrderId, amount, currency } =
-        orderRes.data.data;
+      const { bookingId, razorpayOrderId, amount, currency } = orderRes.data.data;
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -141,9 +156,7 @@ function BookInterview({ onBookingConfirmed }) {
             onBookingConfirmed();
             handleCategoryChange(selectedCategory);
           } catch (err) {
-            setError(
-              err.response?.data?.message || "Payment verification failed",
-            );
+            setError(err.response?.data?.message || "Payment verification failed");
           } finally {
             setBookingSlotId(null);
           }
@@ -165,9 +178,7 @@ function BookInterview({ onBookingConfirmed }) {
   return (
     <div>
       <div className="max-w-sm mb-6">
-        <label className="block text-sm text-text-secondary mb-1">
-          Select a category
-        </label>
+        <label className="block text-sm text-text-secondary mb-1">Select a category</label>
         <select
           value={selectedCategory}
           onChange={(e) => handleCategoryChange(e.target.value)}
@@ -184,27 +195,18 @@ function BookInterview({ onBookingConfirmed }) {
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
-      {loadingEmployees && (
-        <p className="text-text-secondary text-sm">Loading employees...</p>
-      )}
+      {loadingEmployees && <p className="text-text-secondary text-sm">Loading employees...</p>}
 
       {!loadingEmployees && selectedCategory && employees.length === 0 && (
-        <p className="text-text-secondary text-sm">
-          No employees available in this category yet.
-        </p>
+        <p className="text-text-secondary text-sm">No employees available in this category yet.</p>
       )}
 
       <div className="space-y-4">
         {employees.map((emp) => (
-          <div
-            key={emp.id}
-            className="bg-bg-card border border-border rounded-xl p-5"
-          >
+          <div key={emp.id} className="bg-bg-card border border-border rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="font-medium text-text-primary">
-                  {emp.user?.name}
-                </p>
+                <p className="font-medium text-text-primary">{emp.user?.name}</p>
                 <p className="text-sm text-text-secondary">
                   {emp.designation || "—"}
                   {emp.company ? ` at ${emp.company}` : ""}
@@ -214,41 +216,21 @@ function BookInterview({ onBookingConfirmed }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mb-4 text-xs text-text-secondary">
               {emp.experience && (
-                <p>
-                  <span className="text-text-primary font-medium">
-                    Experience:
-                  </span>{" "}
-                  {emp.experience}
-                </p>
+                <p><span className="text-text-primary font-medium">Experience:</span> {emp.experience}</p>
               )}
               {emp.location && (
-                <p>
-                  <span className="text-text-primary font-medium">
-                    Location:
-                  </span>{" "}
-                  {emp.location}
-                </p>
+                <p><span className="text-text-primary font-medium">Location:</span> {emp.location}</p>
               )}
               {emp.education && (
-                <p>
-                  <span className="text-text-primary font-medium">
-                    Education:
-                  </span>{" "}
-                  {emp.education}
-                </p>
+                <p><span className="text-text-primary font-medium">Education:</span> {emp.education}</p>
               )}
               {emp.skills && (
-                <p>
-                  <span className="text-text-primary font-medium">Skills:</span>{" "}
-                  {emp.skills}
-                </p>
+                <p><span className="text-text-primary font-medium">Skills:</span> {emp.skills}</p>
               )}
             </div>
 
             {emp.slots.length === 0 ? (
-              <p className="text-xs text-text-secondary">
-                No open slots in the next 7 days.
-              </p>
+              <p className="text-xs text-text-secondary">No open slots in the next 7 days.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {emp.slots.map((slot) => (
@@ -260,10 +242,7 @@ function BookInterview({ onBookingConfirmed }) {
                   >
                     <Clock size={12} />
                     {new Date(slot.startTime).toLocaleDateString()}{" "}
-                    {new Date(slot.startTime).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {new Date(slot.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </button>
                 ))}
               </div>
@@ -281,18 +260,14 @@ function RebookModal({ booking, availableSlots, onClose, onConfirm, loading }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-md">
-        <h3 className="font-semibold text-text-primary mb-3">
-          Rebook with same employee
-        </h3>
+        <h3 className="font-semibold text-text-primary mb-3">Rebook with same employee</h3>
         <p className="text-sm text-text-secondary mb-4">
-          No new payment needed — your existing ₹{booking.amount} will be used
-          for the new slot.
+          No new payment needed — your existing ₹{booking.amount} will be used for the new slot.
         </p>
 
         {availableSlots.length === 0 ? (
           <p className="text-sm text-text-secondary mb-4">
-            This employee has no other open slots right now. Try requesting a
-            refund instead.
+            This employee has no other open slots right now. Try requesting a refund instead.
           </p>
         ) : (
           <select
@@ -310,10 +285,7 @@ function RebookModal({ booking, availableSlots, onClose, onConfirm, loading }) {
         )}
 
         <div className="flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="text-sm text-text-secondary px-4 py-2 rounded hover:bg-bg-secondary"
-          >
+          <button onClick={onClose} className="text-sm text-text-secondary px-4 py-2 rounded hover:bg-bg-secondary">
             Back
           </button>
           <button
@@ -329,17 +301,35 @@ function RebookModal({ booking, availableSlots, onClose, onConfirm, loading }) {
   );
 }
 
-const JOIN_WINDOW_BEFORE_MIN = 10;
+function ViewFeedbackModal({ booking, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-md">
+        <h3 className="font-semibold text-text-primary mb-1">Interview Feedback</h3>
+        <p className="text-sm text-text-secondary mb-4">
+          From {booking.employeeProfile?.user?.name || "the interviewer"}
+        </p>
 
-const canJoinNow = (booking) => {
-  const now = new Date();
-  const startTime = new Date(booking.slot.startTime);
-  const endTime = new Date(booking.slot.endTime);
-  const windowStart = new Date(
-    startTime.getTime() - JOIN_WINDOW_BEFORE_MIN * 60 * 1000,
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl font-bold text-accent">{booking.score}/10</span>
+        </div>
+
+        <p className="text-sm text-text-secondary leading-relaxed">
+          {booking.feedback || "No written feedback provided."}
+        </p>
+
+        <button
+          onClick={onClose}
+          className="mt-6 w-full text-sm border border-border rounded-lg px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition"
+        >
+          Close
+        </button>
+      </div>
+    </div>
   );
-  return now >= windowStart && now <= endTime;
-};
+}
+
+const JOIN_WINDOW_BEFORE_MIN = 10;
 
 function MyBookings({
   bookings,
@@ -356,28 +346,20 @@ function MyBookings({
   const [rebookSlots, setRebookSlots] = useState([]);
   const [rebookLoading, setRebookLoading] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [feedbackViewTarget, setFeedbackViewTarget] = useState(null);
 
-  // Re-check Join Interview availability every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(new Date());
     }, 30000);
-
     return () => clearInterval(interval);
   }, []);
 
   const canJoinNow = (booking) => {
-    if (!booking?.slot?.startTime || !booking?.slot?.endTime) {
-      return false;
-    }
-
+    if (!booking?.slot?.startTime || !booking?.slot?.endTime) return false;
     const startTime = new Date(booking.slot.startTime);
     const endTime = new Date(booking.slot.endTime);
-
-    const windowStart = new Date(
-      startTime.getTime() - JOIN_WINDOW_BEFORE_MIN * 60 * 1000,
-    );
-
+    const windowStart = new Date(startTime.getTime() - JOIN_WINDOW_BEFORE_MIN * 60 * 1000);
     return now >= windowStart && now <= endTime;
   };
 
@@ -388,12 +370,9 @@ function MyBookings({
 
     try {
       const slots = await getEmployeeSlots(booking.employeeProfile.id);
-
       const futureSlots = (slots || []).filter(
-        (slot) =>
-          slot.status === "OPEN" && new Date(slot.startTime) > new Date(),
+        (slot) => slot.status === "OPEN" && new Date(slot.startTime) > new Date()
       );
-
       setRebookSlots(futureSlots);
     } finally {
       setRebookLoading(false);
@@ -402,16 +381,13 @@ function MyBookings({
 
   const handleRebookConfirm = async (bookingId, newSlotId) => {
     if (!newSlotId) return;
-
     await onRebook(bookingId, newSlotId);
-
     setRebookTarget(null);
     setRebookSlots([]);
   };
 
   const handleCloseRebook = () => {
     if (actionLoading || rebookLoading) return;
-
     setRebookTarget(null);
     setRebookSlots([]);
   };
@@ -427,13 +403,9 @@ function MyBookings({
           <thead className="bg-bg-secondary text-text-secondary text-left">
             <tr>
               <th className="px-4 py-3 font-medium">Employee</th>
-
               <th className="px-4 py-3 font-medium">Slot</th>
-
               <th className="px-4 py-3 font-medium">Amount</th>
-
               <th className="px-4 py-3 font-medium">Status</th>
-
               <th className="px-4 py-3 font-medium text-right">Action</th>
             </tr>
           </thead>
@@ -444,24 +416,16 @@ function MyBookings({
 
               return (
                 <tr key={booking.id} className="border-t border-border">
-                  {/* Employee */}
                   <td className="px-4 py-3 text-text-primary">
                     {booking.employeeProfile?.user?.name || "—"}
                   </td>
 
-                  {/* Slot */}
                   <td className="px-4 py-3 text-text-secondary">
-                    {booking.slot?.startTime
-                      ? new Date(booking.slot.startTime).toLocaleString()
-                      : "—"}
+                    {booking.slot?.startTime ? new Date(booking.slot.startTime).toLocaleString() : "—"}
                   </td>
 
-                  {/* Amount */}
-                  <td className="px-4 py-3 text-text-secondary">
-                    ₹{booking.amount}
-                  </td>
+                  <td className="px-4 py-3 text-text-secondary">₹{booking.amount}</td>
 
-                  {/* Status */}
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
@@ -469,34 +433,27 @@ function MyBookings({
                           booking.status === "COMPLETED"
                             ? "bg-green-500/10 text-green-600"
                             : booking.status === "CONFIRMED"
-                              ? "bg-blue-500/10 text-blue-600"
-                              : booking.status === "CANCELLED"
-                                ? "bg-red-500/10 text-red-500"
-                                : "bg-gray-500/10 text-text-secondary"
+                            ? "bg-blue-500/10 text-blue-600"
+                            : booking.status === "CANCELLED"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-gray-500/10 text-text-secondary"
                         }`}
                       >
                         {booking.status}
                       </span>
 
-                      {booking.status === "CANCELLED" &&
-                        booking.refundStatus === "PROCESSED" && (
-                          <span className="text-xs text-green-600">
-                            Refunded
-                          </span>
-                        )}
+                      {booking.status === "CANCELLED" && booking.refundStatus === "PROCESSED" && (
+                        <span className="text-xs text-green-600">Refunded</span>
+                      )}
                     </div>
                   </td>
 
-                  {/* Actions */}
                   <td className="px-4 py-3 text-right">
                     {/* CONFIRMED */}
                     {booking.status === "CONFIRMED" && (
                       <div className="flex gap-2 justify-end flex-wrap">
-                        {/* Join Interview */}
                         <button
-                          onClick={() =>
-                            navigate(`/interview-room/${booking.id}`)
-                          }
+                          onClick={() => navigate(`/interview-room/${booking.id}`)}
                           disabled={!joinAllowed}
                           title={
                             joinAllowed
@@ -508,68 +465,68 @@ function MyBookings({
                           Join Interview
                         </button>
 
-                        {/* Confirm Complete */}
                         {!booking.candidateConfirmedAt && (
                           <button
                             onClick={() => onConfirm(booking.id)}
                             disabled={confirmLoadingId === booking.id}
                             className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {confirmLoadingId === booking.id
-                              ? "Confirming..."
-                              : "Confirm Complete"}
+                            {confirmLoadingId === booking.id ? "Confirming..." : "Confirm Complete"}
                           </button>
                         )}
 
-                        {/* Waiting for Employee */}
-                        {booking.candidateConfirmedAt &&
-                          booking.status !== "COMPLETED" && (
-                            <span className="text-xs text-text-secondary px-2 py-1.5">
-                              Waiting for employee
-                            </span>
-                          )}
+                        {booking.candidateConfirmedAt && (
+                          <span className="text-xs text-text-secondary px-2 py-1.5">
+                            Waiting for employee
+                          </span>
+                        )}
                       </div>
                     )}
 
+                    {/* View Feedback — only for COMPLETED, separate from CONFIRMED block */}
+                    {booking.status === "COMPLETED" && booking.feedbackGivenAt && (
+                      <button
+                        onClick={() => setFeedbackViewTarget(booking)}
+                        className="text-xs font-medium bg-accent/10 hover:bg-accent/20 text-accent px-3 py-1.5 rounded-full transition-colors"
+                      >
+                        View Feedback
+                      </button>
+                    )}
+
                     {/* CANCELLED + PENDING REFUND */}
-                    {booking.status === "CANCELLED" &&
-                      booking.refundStatus === "PENDING" && (
-                        <div className="flex gap-2 justify-end flex-wrap">
-                          <button
-                            onClick={() => openRebookModal(booking)}
-                            disabled={actionLoading || rebookLoading}
-                            className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <CalendarClock size={12} />
+                    {booking.status === "CANCELLED" && booking.refundStatus === "PENDING" && (
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        <button
+                          onClick={() => openRebookModal(booking)}
+                          disabled={actionLoading || rebookLoading}
+                          className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <CalendarClock size={12} />
+                          {rebookLoading && rebookTarget?.id === booking.id ? "Loading..." : "Rebook Same Employee"}
+                        </button>
 
-                            {rebookLoading && rebookTarget?.id === booking.id
-                              ? "Loading..."
-                              : "Rebook Same Employee"}
-                          </button>
-
-                          <button
-                            onClick={() => onRefund(booking.id)}
-                            disabled={actionLoading}
-                            className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Wallet size={12} />
-                            Request Refund
-                          </button>
-                        </div>
-                      )}
-
-                    {/* CANCELLED + FAILED REFUND */}
-                    {booking.status === "CANCELLED" &&
-                      booking.refundStatus === "FAILED" && (
                         <button
                           onClick={() => onRefund(booking.id)}
                           disabled={actionLoading}
-                          className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                          className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Wallet size={12} />
-                          Retry Refund
+                          Request Refund
                         </button>
-                      )}
+                      </div>
+                    )}
+
+                    {/* CANCELLED + FAILED REFUND */}
+                    {booking.status === "CANCELLED" && booking.refundStatus === "FAILED" && (
+                      <button
+                        onClick={() => onRefund(booking.id)}
+                        disabled={actionLoading}
+                        className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                      >
+                        <Wallet size={12} />
+                        Retry Refund
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
@@ -578,7 +535,6 @@ function MyBookings({
         </table>
       </div>
 
-      {/* Rebook Modal */}
       {rebookTarget && (
         <RebookModal
           booking={rebookTarget}
@@ -586,6 +542,13 @@ function MyBookings({
           onClose={handleCloseRebook}
           onConfirm={handleRebookConfirm}
           loading={actionLoading || rebookLoading}
+        />
+      )}
+
+      {feedbackViewTarget && (
+        <ViewFeedbackModal
+          booking={feedbackViewTarget}
+          onClose={() => setFeedbackViewTarget(null)}
         />
       )}
     </>
@@ -606,19 +569,14 @@ export default function CandidateDashboard() {
       await getCandidateProfile();
       setNeedsProfile(false);
 
-      const [summaryRes, bookingsRes] = await Promise.all([
-        getCandidateDashboard(),
-        getMyBookings(),
-      ]);
+      const [summaryRes, bookingsRes] = await Promise.all([getCandidateDashboard(), getMyBookings()]);
       setSummary(summaryRes.data.data);
       setBookings(bookingsRes.data.data);
     } catch (err) {
       if (err.response?.status === 404) {
         setNeedsProfile(true);
       } else {
-        setError(
-          err.response?.data?.message || "Failed to load dashboard data",
-        );
+        setError(err.response?.data?.message || "Failed to load dashboard data");
       }
     }
   };
@@ -665,16 +623,12 @@ export default function CandidateDashboard() {
     }
   };
 
-  // Helper to fetch a specific employee's open slots for the rebook modal.
-  // Reuses category-based endpoint isn't ideal here — see note below.
   const getEmployeeSlotsForRebook = async (employeeProfileId) => {
     try {
       const res = await getEmployeeOpenSlots(employeeProfileId);
       return res.data.data;
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to load employee's slots",
-      );
+      setError(err.response?.data?.message || "Failed to load employee's slots");
       return [];
     }
   };
@@ -710,10 +664,8 @@ export default function CandidateDashboard() {
               ))}
             </div>
 
-            {activeTab === "Overview" && <Overview summary={summary} onProfileUpdated={loadAll}  />}
-            {activeTab === "Book Interview" && (
-              <BookInterview onBookingConfirmed={loadAll} />
-            )}
+            {activeTab === "Overview" && <Overview summary={summary} onProfileUpdated={loadAll} />}
+            {activeTab === "Book Interview" && <BookInterview onBookingConfirmed={loadAll} />}
             {activeTab === "My Bookings" && (
               <MyBookings
                 bookings={bookings}
