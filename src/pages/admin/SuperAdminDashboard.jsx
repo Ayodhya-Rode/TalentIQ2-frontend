@@ -31,6 +31,7 @@ const TABS = [
   "Overview",
   "Pending Approvals",
   "All Users",
+  "Rejected Users",
   "Categories",
   "Cancellation Warnings",
 ];
@@ -401,6 +402,8 @@ export default function SuperAdminDashboard() {
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [error, setError] = useState("");
   const [cancellationWarnings, setCancellationWarnings] = useState([]);
+  const [rejectedUsers, setRejectedUsers] = useState([]);
+  const [rejectedRoleFilter, setRejectedRoleFilter] = useState("ALL");
 
   const loadAll = async () => {
     try {
@@ -424,7 +427,10 @@ export default function SuperAdminDashboard() {
   // Load all users when the "All Users" tab is active or when the role filter changes
   useEffect(() => {
     if (activeTab !== "All Users") return;
-    const params = { status: "APPROVED", ...(roleFilter !== "ALL" && { role: roleFilter }) };
+    const params = {
+      status: "APPROVED",
+      ...(roleFilter !== "ALL" && { role: roleFilter }),
+    };
     getAllUsers(params)
       .then((res) => setAllUsers(res.data.data))
       .catch((err) =>
@@ -443,6 +449,19 @@ export default function SuperAdminDashboard() {
         ),
       );
   }, [activeTab]);
+
+  useEffect(() => {
+  if (activeTab !== "Rejected Users") return;
+  const params = {
+    status: "REJECTED",
+    ...(rejectedRoleFilter !== "ALL" && { role: rejectedRoleFilter }),
+  };
+  getAllUsers(params)
+    .then((res) => setRejectedUsers(res.data.data))
+    .catch((err) =>
+      setError(err.response?.data?.message || "Failed to load rejected users"),
+    );
+}, [activeTab, rejectedRoleFilter]);
 
   const handleApprove = async (id) => {
     setActionLoadingId(id);
@@ -540,12 +559,19 @@ export default function SuperAdminDashboard() {
             actionLoadingId={actionLoadingId}
           />
         )}
-        
+
         {activeTab === "All Users" && (
           <AllUsers
             users={allUsers}
             roleFilter={roleFilter}
             setRoleFilter={setRoleFilter}
+          />
+        )}
+        {activeTab === "Rejected Users" && (
+          <AllUsers
+            users={rejectedUsers}
+            roleFilter={rejectedRoleFilter}
+            setRoleFilter={setRejectedRoleFilter}
           />
         )}
 
