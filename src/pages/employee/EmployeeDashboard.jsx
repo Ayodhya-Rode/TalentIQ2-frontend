@@ -25,6 +25,7 @@ import EmployeeProfileForm from "./EmployeeProfileForm";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { setDayOffline } from "../../api/employeeApi";
+import EditEmployeeProfile from "./EditEmployeeProfile";
 
 const TABS = ["Overview", "My Slots", "My Bookings"];
 
@@ -42,7 +43,8 @@ function SummaryCard({ icon: Icon, label, value }) {
   );
 }
 
-function Overview({ summary, profile }) {
+function Overview({ summary, profile, onProfileUpdated }) {
+  const [editing, setEditing] = useState(false);
   if (!summary) return null;
 
   const profileIncomplete =
@@ -51,9 +53,16 @@ function Overview({ summary, profile }) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">
-          Your Stats
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">Your Stats</h2>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-sm font-medium text-accent hover:underline"
+          >
+            Edit Profile
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard
             icon={CheckCircle2}
@@ -76,6 +85,13 @@ function Overview({ summary, profile }) {
             value={`₹${summary.totalRevenueEarned}`}
           />
         </div>
+
+        {editing && (
+          <EditEmployeeProfile
+            onClose={() => setEditing(false)}
+            onUpdated={onProfileUpdated}
+          />
+        )}
       </div>
 
       {profileIncomplete && (
@@ -91,27 +107,17 @@ function Overview({ summary, profile }) {
           Employee Guidelines
         </h3>
         <ul className="text-sm text-text-secondary space-y-2 list-disc list-inside">
-          <li>
-            You earn ₹50 for every interview marked complete by both sides.
-          </li>
-          <li>
-            You can only confirm an interview as complete after its scheduled
-            start time.
-          </li>
-          <li>
-            Confirmation must happen within 24 hours of the slot's end time, or
-            it expires.
-          </li>
-          <li>
-            Candidates can see and book your open slots up to 7 days in advance.
-          </li>
+          <li>You earn ₹50 for every interview marked complete by both sides.</li>
+          <li>You can only confirm an interview as complete after its scheduled start time.</li>
+          <li>Confirmation must happen within 24 hours of the slot's end time, or it expires.</li>
+          <li>Candidates can see and book your open slots up to 7 days in advance.</li>
         </ul>
       </div>
     </div>
   );
 }
 
-function MySlots({ slots, onCreate, onDelete, onRefresh  }) {
+function MySlots({ slots, onCreate, onDelete, onRefresh }) {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -146,7 +152,7 @@ function MySlots({ slots, onCreate, onDelete, onRefresh  }) {
 
   return (
     <div>
-       <DayOfflineForm onDone={onRefresh} />
+      <DayOfflineForm onDone={onRefresh} />
       <form
         onSubmit={handleSubmit}
         className="bg-bg-card border border-border rounded-xl p-5 mb-6 flex flex-wrap items-end gap-4"
@@ -647,7 +653,8 @@ function DayOfflineForm({ onDone }) {
         {loading ? "Processing..." : "Set Day Offline"}
       </button>
       <p className="text-xs text-text-secondary w-full">
-        Hides all your open slots for that day. Already-booked slots are never affected — no monthly limit applies here.
+        Hides all your open slots for that day. Already-booked slots are never
+        affected — no monthly limit applies here.
       </p>
     </form>
   );
@@ -719,7 +726,9 @@ export default function EmployeeDashboard() {
       loadAll();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to confirm completion");
-       toast.error(err.response?.data?.message || "Failed to confirm completion");
+      toast.error(
+        err.response?.data?.message || "Failed to confirm completion",
+      );
     } finally {
       setConfirmLoadingId(null);
     }
@@ -792,7 +801,11 @@ export default function EmployeeDashboard() {
             </div>
 
             {activeTab === "Overview" && (
-              <Overview summary={summary} profile={profile} />
+              <Overview
+                summary={summary}
+                profile={profile}
+                onProfileUpdated={loadAll}
+              />
             )}
             {activeTab === "My Slots" && (
               <MySlots

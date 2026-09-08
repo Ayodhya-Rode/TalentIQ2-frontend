@@ -16,6 +16,7 @@ import DashboardHeader from "../../components/DashboardHeader";
 import CandidateProfileForm from "./CandidateProfileForm";
 import { CheckCircle2, CalendarClock, Wallet, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import EditCandidateProfile from "./EditCandidateProfile";
 
 const TABS = ["Overview", "Book Interview", "My Bookings"];
 
@@ -33,48 +34,50 @@ function SummaryCard({ icon: Icon, label, value }) {
   );
 }
 
-function Overview({ summary }) {
+function Overview({ summary, onProfileUpdated }) {
+  const [editing, setEditing] = useState(false);
+
   if (!summary) return null;
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">
-          Your Stats
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SummaryCard
-            icon={CheckCircle2}
-            label="Interviews Attended"
-            value={summary.totalInterviewsAttended}
-          />
-          <SummaryCard
-            icon={CalendarClock}
-            label="Upcoming Interviews"
-            value={summary.upcomingConfirmedInterviews}
-          />
-          <SummaryCard
-            icon={Wallet}
-            label="Total Paid"
-            value={`₹${summary.totalAmountPaid}`}
-          />
-        </div>
+      <div className="flex justify-between items-start">
+        <h2 className="text-lg font-semibold text-text-primary">Your Stats</h2>
+        <button
+          onClick={() => setEditing(true)}
+          className="text-sm font-medium text-accent hover:underline"
+        >
+          Edit Profile
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <SummaryCard
+          icon={CheckCircle2}
+          label="Interviews Attended"
+          value={summary.totalInterviewsAttended}
+        />
+        <SummaryCard
+          icon={CalendarClock}
+          label="Upcoming Interviews"
+          value={summary.upcomingConfirmedInterviews}
+        />
+        <SummaryCard icon={Wallet} label="Total Paid" value={`₹${summary.totalAmountPaid}`} />
       </div>
 
       <div className="bg-bg-card border border-border rounded-xl p-6">
-        <h3 className="font-semibold text-text-primary mb-3">
-          Booking Guidelines
-        </h3>
+        <h3 className="font-semibold text-text-primary mb-3">Booking Guidelines</h3>
         <ul className="text-sm text-text-secondary space-y-2 list-disc list-inside">
           <li>You can see and book slots up to 7 days in advance.</li>
           <li>You can book at most 3 slots per week with the same employee.</li>
           <li>Each booking costs a flat ₹100, paid securely via Razorpay.</li>
-          <li>
-            Confirm your interview as complete once it happens — both sides must
-            confirm.
-          </li>
+          <li>Confirm your interview as complete once it happens — both sides must confirm.</li>
         </ul>
       </div>
+
+      {editing && (
+        <EditCandidateProfile onClose={() => setEditing(false)} onUpdated={onProfileUpdated} />
+      )}
     </div>
   );
 }
@@ -707,7 +710,7 @@ export default function CandidateDashboard() {
               ))}
             </div>
 
-            {activeTab === "Overview" && <Overview summary={summary} />}
+            {activeTab === "Overview" && <Overview summary={summary} onProfileUpdated={loadAll}  />}
             {activeTab === "Book Interview" && (
               <BookInterview onBookingConfirmed={loadAll} />
             )}
