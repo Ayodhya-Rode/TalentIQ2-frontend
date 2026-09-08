@@ -16,6 +16,7 @@ import InterviewRoom from "./pages/InterviewRoom";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyOtp from "./pages/VerifyOtp";
 import ResetPassword from "./pages/ResetPassword";
+import ScrollToTop from "./components/ScrollToTop";
 
 function PublicLayout({ children }) {
   return (
@@ -62,6 +63,7 @@ export default function App() {
         pauseOnHover
         theme="dark"
       />
+      <ScrollToTop />
       <Routes>
         <Route
           path="/"
