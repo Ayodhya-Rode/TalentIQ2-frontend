@@ -496,7 +496,20 @@ function MyBookings({
                 <tr key={booking.id} className="border-t border-border">
                   {/* Candidate */}
                   <td className="px-4 py-3 text-text-primary">
-                    {booking.candidateProfile?.user?.name || "—"}
+                    <div>
+                      {booking.candidateProfile?.user?.name || "—"}
+
+                      {booking.candidateProfile?.resumeUrl && (
+                        <a
+                          href={booking.candidateProfile.resumeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-xs text-accent hover:underline mt-1"
+                        >
+                          View Resume
+                        </a>
+                      )}
+                    </div>
                   </td>
 
                   {/* Slot */}
