@@ -1,12 +1,19 @@
-import { Sun, Moon, LogOut, ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { Sun, Moon, LogOut, ArrowLeft, LifeBuoy,KeyRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
+import RaiseQueryModal from "./RaiseQueryModal";
+import ChangePasswordModal from "./ChangePasswordModal";
+
+const QUERY_ROLES = ["CANDIDATE", "EMPLOYEE", "RECRUITER"];
 
 export default function DashboardHeader({ title }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [showQueryModal, setShowQueryModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-bg-card">
@@ -26,6 +33,22 @@ export default function DashboardHeader({ title }) {
       </div>
 
       <div className="flex items-center gap-3">
+        {QUERY_ROLES.includes(user?.role) && (
+          <button
+            onClick={() => setShowQueryModal(true)}
+            className="flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-accent transition-colors px-3 py-2 rounded-full hover:bg-bg-secondary"
+          >
+            <LifeBuoy size={16} />
+            Raise a Query
+          </button>
+        )}
+        <button
+          onClick={() => setShowPasswordModal(true)}
+          className="flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-accent transition-colors px-3 py-2 rounded-full hover:bg-bg-secondary"
+        >
+          <KeyRound size={16} />
+          Change Password
+        </button>
         <button
           onClick={toggleTheme}
           aria-label="Toggle theme"
@@ -41,6 +64,13 @@ export default function DashboardHeader({ title }) {
           Logout
         </button>
       </div>
+
+      {showQueryModal && (
+        <RaiseQueryModal onClose={() => setShowQueryModal(false)} />
+      )}
+      {showPasswordModal && (
+        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+      )}
     </header>
   );
 }

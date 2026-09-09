@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+
 import {
   getDashboardSummary,
   getPendingUsers,
@@ -6,6 +7,7 @@ import {
   rejectUser,
   getAllUsers,
   getCancellationWarnings,
+  createSupportUser,
 } from "../../api/superAdminApi";
 import {
   getCategories,
@@ -14,6 +16,7 @@ import {
   deleteCategory,
 } from "../../api/categoryApi";
 import DashboardHeader from "../../components/DashboardHeader";
+import { toast } from "react-toastify";
 import {
   Users,
   Clock,
@@ -25,6 +28,7 @@ import {
   X,
   Trash2,
   Pencil,
+  LifeBuoy,
 } from "lucide-react";
 
 const TABS = [
@@ -34,6 +38,7 @@ const TABS = [
   "Rejected Users",
   "Categories",
   "Cancellation Warnings",
+  "Support Staff",
 ];
 
 function SummaryCard({ icon: Icon, label, value }) {
@@ -92,7 +97,38 @@ function Overview({ summary }) {
           />
         </div>
       </div>
-
+      {summary.supportQueries && (
+        <div>
+          <h2 className="text-lg font-semibold text-text-primary mb-4">
+            Support Queries
+          </h2>
+          <div className="bg-bg-card border border-border rounded-xl p-5 flex flex-wrap items-center gap-6">
+            <div className="w-11 h-11 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
+              <LifeBuoy size={20} className="text-accent" />
+            </div>
+            <div className="flex flex-wrap gap-x-8 gap-y-2">
+              <div>
+                <p className="text-2xl font-bold text-text-primary">
+                  {summary.supportQueries.total}
+                </p>
+                <p className="text-sm text-text-secondary">Total</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">
+                  {summary.supportQueries.solved}
+                </p>
+                <p className="text-sm text-text-secondary">Solved</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {summary.supportQueries.pending}
+                </p>
+                <p className="text-sm text-text-secondary">Pending</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h2 className="text-lg font-semibold text-text-primary mb-4">
           Rejected Accounts
@@ -392,6 +428,76 @@ function Categories({ categories, onCreate, onUpdate, onDelete }) {
   );
 }
 
+function SupportStaff() {
+  const [form, setForm] = useState({ name: "", email: "" });
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.email.trim()) {
+      toast.error("Name and email are both required");
+      return;
+    }
+    setLoading(true);
+    try {
+      await createSupportUser(form);
+      toast.success("Support account created. Credentials have been emailed.");
+      setForm({ name: "", email: "" });
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Failed to create support account",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-md bg-bg-card border border-border rounded-xl p-6">
+      <h2 className="text-lg font-semibold text-text-primary mb-1">
+        Create Support Account
+      </h2>
+      <p className="text-sm text-text-secondary mb-6">
+        There's no public sign-up for the Support role — only you can create
+        one. A temporary password and login link will be emailed automatically.
+      </p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm text-text-secondary mb-1">Name</label>
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            className="w-full bg-bg-secondary border border-border rounded px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-text-secondary mb-1">
+            Email
+          </label>
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full bg-bg-secondary border border-border rounded px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-accent hover:bg-accent-hover text-white rounded py-2 font-medium transition-colors disabled:opacity-50"
+        >
+          {loading ? "Creating..." : "Create Support Account"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [summary, setSummary] = useState(null);
@@ -451,17 +557,19 @@ export default function SuperAdminDashboard() {
   }, [activeTab]);
 
   useEffect(() => {
-  if (activeTab !== "Rejected Users") return;
-  const params = {
-    status: "REJECTED",
-    ...(rejectedRoleFilter !== "ALL" && { role: rejectedRoleFilter }),
-  };
-  getAllUsers(params)
-    .then((res) => setRejectedUsers(res.data.data))
-    .catch((err) =>
-      setError(err.response?.data?.message || "Failed to load rejected users"),
-    );
-}, [activeTab, rejectedRoleFilter]);
+    if (activeTab !== "Rejected Users") return;
+    const params = {
+      status: "REJECTED",
+      ...(rejectedRoleFilter !== "ALL" && { role: rejectedRoleFilter }),
+    };
+    getAllUsers(params)
+      .then((res) => setRejectedUsers(res.data.data))
+      .catch((err) =>
+        setError(
+          err.response?.data?.message || "Failed to load rejected users",
+        ),
+      );
+  }, [activeTab, rejectedRoleFilter]);
 
   const handleApprove = async (id) => {
     setActionLoadingId(id);
@@ -587,6 +695,8 @@ export default function SuperAdminDashboard() {
         {activeTab === "Cancellation Warnings" && (
           <CancellationWarnings warnings={cancellationWarnings} />
         )}
+
+        {activeTab === "Support Staff" && <SupportStaff />}
       </div>
     </div>
   );
