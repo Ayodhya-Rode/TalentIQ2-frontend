@@ -242,7 +242,7 @@ function AllUsers({ users, roleFilter, setRoleFilter }) {
   return (
     <div>
       <div className="flex gap-2 mb-4">
-        {["ALL", "EMPLOYEE", "CANDIDATE", "RECRUITER"].map((r) => (
+        {["ALL", "EMPLOYEE", "CANDIDATE", "RECRUITER","SUPPORT"].map((r) => (
           <button
             key={r}
             onClick={() => setRoleFilter(r)}
