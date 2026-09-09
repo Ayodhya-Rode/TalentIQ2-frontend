@@ -17,6 +17,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyOtp from "./pages/VerifyOtp";
 import ResetPassword from "./pages/ResetPassword";
 import ScrollToTop from "./components/ScrollToTop";
+import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard";
 
 function PublicLayout({ children }) {
   return (
@@ -34,6 +35,7 @@ function RoleDashboard() {
   if (user?.role === "SUPER_ADMIN") return <SuperAdminDashboard />;
   if (user?.role === "EMPLOYEE") return <EmployeeDashboard />;
   if (user?.role === "CANDIDATE") return <CandidateDashboard />;
+    if (user?.role === "RECRUITER") return <RecruiterDashboard />;
   // Placeholder until Employee/Candidate dashboards are built
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-primary text-text-primary">
