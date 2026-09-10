@@ -17,6 +17,22 @@ export const getAccessToken = () => {
   return accessToken;
 };
 
+// Lets App.jsx hand this module a React Router navigate function,
+// so redirects here are client-side instead of full page reloads.
+let navigateRef = null;
+export const setNavigate = (navFn) => {
+  navigateRef = navFn;
+};
+
+const redirectToLogin = () => {
+  if (navigateRef) {
+    navigateRef("/login", { replace: true });
+  } else {
+    // fallback only if router isn't mounted yet (shouldn't normally happen)
+    window.location.href = "/login";
+  }
+};
+
 api.interceptors.request.use(
   (config) => {
     if (accessToken) {
@@ -58,9 +74,9 @@ api.interceptors.response.use(
 
     // Prevent refresh endpoint from triggering another refresh
     if (originalRequest.url?.includes("/auth/refresh")) {
-  setAccessToken(null);
-  return Promise.reject(error);
-}
+      setAccessToken(null);
+      return Promise.reject(error);
+    }
 
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
@@ -107,7 +123,7 @@ api.interceptors.response.use(
         callback(null);
       });
       refreshSubscribers = [];
-      window.location.href = "/login";
+      redirectToLogin();
       return Promise.reject(refreshError);
     }
   },

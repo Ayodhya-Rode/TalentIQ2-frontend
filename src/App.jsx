@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate  } from "react-router-dom";
+import { useEffect } from "react";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
@@ -19,6 +20,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ScrollToTop from "./components/ScrollToTop";
 import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard";
 import SupportDashboard from "./pages/support/SupportDashboard";
+import { setNavigate } from "./api/api";
 
 function PublicLayout({ children }) {
   return (
@@ -47,6 +49,14 @@ function RoleDashboard() {
   );
 }
 
+function NavigateSetter() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
+  return null;
+}
+
 export default function App() {
   const { user, loading } = useAuth();
 
@@ -60,6 +70,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+     <NavigateSetter />
       <ToastContainer
         position="top-right"
         autoClose={2000}
