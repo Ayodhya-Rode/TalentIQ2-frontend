@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-
 import {
   User,
   Mail,
@@ -12,16 +11,13 @@ import {
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
-
 import { toast } from "react-toastify";
-
 import { registerUser } from "../api/authApi";
 
 const ROLES = ["CANDIDATE", "EMPLOYEE", "RECRUITER"];
 
 export default function Register() {
   const navigate = useNavigate();
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -63,14 +59,11 @@ export default function Register() {
     <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4 py-8 relative overflow-hidden">
       {/* Background Decorations */}
       <div className="absolute -top-32 -left-32 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
-
       <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
 
-      <div className="relative w-full max-w-5xl grid lg:grid-cols-2 bg-bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
-
+      <div className="relative w-full max-w-5xl grid md:grid-cols-2 bg-bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
         {/* Left Branding Section */}
-        <div className="hidden lg:flex flex-col justify-center p-12 bg-bg-secondary border-r border-border">
-
+        <div className="hidden md:flex flex-col justify-center p-12 bg-bg-secondary border-r border-border">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white font-bold text-sm tracking-tight">
@@ -96,7 +89,6 @@ export default function Register() {
 
           {/* Features */}
           <div className="mt-10 space-y-4">
-
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                 ✓
@@ -126,13 +118,11 @@ export default function Register() {
                 Practice and improve your interview skills
               </span>
             </div>
-
           </div>
         </div>
 
         {/* Register Section */}
         <div className="p-6 sm:p-8 lg:p-10">
-
           {/* Back to Home */}
           <button
             type="button"
@@ -144,7 +134,7 @@ export default function Register() {
           </button>
 
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-2 mb-7">
+          <div className="md:hidden flex items-center justify-center gap-2 mb-7">
             <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-xs tracking-tight">
               TQ
             </div>
@@ -173,7 +163,6 @@ export default function Register() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-text-primary mb-1.5">

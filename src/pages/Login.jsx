@@ -1,9 +1,6 @@
 import { useState } from "react";
-
 import { Link, useNavigate } from "react-router-dom";
-
 import { useForm } from "react-hook-form";
-
 import {
   Eye,
   EyeOff,
@@ -12,7 +9,6 @@ import {
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
-
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
@@ -41,7 +37,6 @@ export default function Login() {
 
     try {
       await login(data.email, data.password);
-
       reset();
       navigate("/dashboard");
     } catch (err) {
@@ -75,12 +70,11 @@ export default function Login() {
     <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4 py-8 relative overflow-hidden">
       {/* Background Decorations */}
       <div className="absolute -top-32 -left-32 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
-
       <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
 
-      <div className="relative w-full max-w-5xl grid lg:grid-cols-2 bg-bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
+      <div className="relative w-full max-w-5xl grid md:grid-cols-2 bg-bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
         {/* Left Branding Section */}
-        <div className="hidden lg:flex flex-col justify-center p-12 bg-bg-secondary border-r border-border">
+        <div className="hidden md:flex flex-col justify-center p-12 bg-bg-secondary border-r border-border">
           <div className="mb-10">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-6">
@@ -153,7 +147,7 @@ export default function Login() {
           </button>
 
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+          <div className="md:hidden flex items-center justify-center gap-2 mb-8">
             <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-white font-bold">
               TQ
             </div>
@@ -201,12 +195,10 @@ export default function Login() {
                   autoComplete="email"
                   {...register("email", {
                     required: "Email is required",
-
                     pattern: {
                       value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
                       message: "Enter a valid email address",
                     },
-
                     onChange: () => {
                       if (error) {
                         setError("");
@@ -242,7 +234,6 @@ export default function Login() {
                   autoComplete="current-password"
                   {...register("password", {
                     required: "Password is required",
-
                     onChange: () => {
                       if (error) {
                         setError("");
