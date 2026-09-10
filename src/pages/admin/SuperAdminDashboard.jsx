@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import {
   getDashboardSummary,
@@ -242,7 +242,7 @@ function AllUsers({ users, roleFilter, setRoleFilter }) {
   return (
     <div>
       <div className="flex gap-2 mb-4">
-        {["ALL", "EMPLOYEE", "CANDIDATE", "RECRUITER","SUPPORT"].map((r) => (
+        {["ALL", "EMPLOYEE", "CANDIDATE", "RECRUITER", "SUPPORT"].map((r) => (
           <button
             key={r}
             onClick={() => setRoleFilter(r)}
@@ -500,6 +500,8 @@ function SupportStaff() {
 
 export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState("Overview");
+  const tabsScrollRef = useRef(null);
+  const tabRefs = useRef({});
   const [summary, setSummary] = useState(null);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -529,6 +531,15 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+    tabRefs.current[tab]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  };
 
   // Load all users when the "All Users" tab is active or when the role filter changes
   useEffect(() => {
@@ -637,25 +648,32 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab
-                  ? "border-accent text-accent"
-                  : "border-transparent text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              {tab}
-              {tab === "Pending Approvals" && pendingUsers.length > 0 && (
-                <span className="ml-2 bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {pendingUsers.length}
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="relative mb-6 border-b border-border">
+          <div
+            ref={tabsScrollRef}
+            className="flex gap-2 overflow-x-auto no-scrollbar"
+          >
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                ref={(el) => (tabRefs.current[tab] = el)}
+                onClick={() => handleTabClick(tab)}
+                className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 ${
+                  activeTab === tab
+                    ? "border-accent text-accent"
+                    : "border-transparent text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                {tab}
+                {tab === "Pending Approvals" && pendingUsers.length > 0 && (
+                  <span className="ml-2 bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {pendingUsers.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg-primary to-transparent sm:hidden" />
         </div>
 
         {activeTab === "Overview" && <Overview summary={summary} />}
