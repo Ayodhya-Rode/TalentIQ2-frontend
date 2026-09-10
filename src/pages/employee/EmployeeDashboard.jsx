@@ -394,6 +394,7 @@ function MyBookings({
   onCancel,
   onPostpone,
   actionLoading,
+  onRefresh
 }) {
   const navigate = useNavigate();
 
@@ -655,7 +656,10 @@ function MyBookings({
         <FeedbackModal
           booking={feedbackTarget}
           onClose={() => setFeedbackTarget(null)}
-          onSubmitted={() => setFeedbackTarget(null)}
+          onSubmitted={() => {
+            setFeedbackTarget(null);
+            onRefresh();
+          }}
         />
       )}
     </>
@@ -880,6 +884,7 @@ export default function EmployeeDashboard() {
                 onCancel={handleCancel}
                 onPostpone={handlePostpone}
                 actionLoading={actionLoading}
+                onRefresh={loadAll}
               />
             )}
           </>
