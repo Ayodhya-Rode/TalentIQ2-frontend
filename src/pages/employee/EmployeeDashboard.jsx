@@ -782,7 +782,6 @@ export default function EmployeeDashboard() {
       await employeeConfirmComplete(bookingId);
       loadAll();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to confirm completion");
       toast.error(
         err.response?.data?.message || "Failed to confirm completion",
       );
