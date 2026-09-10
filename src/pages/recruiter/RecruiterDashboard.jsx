@@ -9,12 +9,20 @@ import {
 import DashboardHeader from "../../components/DashboardHeader";
 import RecruiterProfileForm from "./RecruiterProfileForm";
 import OutreachModal from "./OutreachModal";
-import { Search, Mail, Clock } from "lucide-react";
+import { Search, Mail, Clock, X } from "lucide-react";
 
 const TABS = ["Browse Candidates", "Outreach History", "Profile"];
 const COOLDOWN_HOURS = 24;
 
-function BrowseCandidates({ candidates, search, setSearch, onSearch, onReachOut, lastContactMap }) {
+function BrowseCandidates({
+  candidates,
+  search,
+  setSearch,
+  onSearch,
+  onReachOut,
+  lastContactMap,
+  onClear,
+}) {
   return (
     <div>
       <form onSubmit={onSearch} className="flex gap-2 max-w-md mb-6">
@@ -31,6 +39,16 @@ function BrowseCandidates({ candidates, search, setSearch, onSearch, onReachOut,
           <Search size={16} />
           Search
         </button>
+        {search && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-red-500 px-3 py-2 rounded border border-border hover:border-red-500/30 hover:bg-red-500/10 transition-colors"
+          >
+            <X size={14} />
+            Clear
+          </button>
+        )}
       </form>
 
       {candidates.length === 0 ? (
@@ -40,16 +58,23 @@ function BrowseCandidates({ candidates, search, setSearch, onSearch, onReachOut,
           {candidates.map((c) => {
             const lastContact = lastContactMap[c.id];
             const hoursSince = lastContact
-              ? (Date.now() - new Date(lastContact).getTime()) / (1000 * 60 * 60)
+              ? (Date.now() - new Date(lastContact).getTime()) /
+                (1000 * 60 * 60)
               : null;
-            const recentlyContacted = hoursSince !== null && hoursSince < COOLDOWN_HOURS;
+            const recentlyContacted =
+              hoursSince !== null && hoursSince < COOLDOWN_HOURS;
 
             return (
-              <div key={c.id} className="bg-bg-card border border-border rounded-xl p-5">
+              <div
+                key={c.id}
+                className="bg-bg-card border border-border rounded-xl p-5"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-text-primary">{c.user?.name}</p>
+                      <p className="font-medium text-text-primary">
+                        {c.user?.name}
+                      </p>
                       {recentlyContacted && (
                         <span className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 text-yellow-600 px-2 py-0.5 rounded-full">
                           <Clock size={10} />
@@ -57,15 +82,21 @@ function BrowseCandidates({ candidates, search, setSearch, onSearch, onReachOut,
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-text-secondary">{c.designation || "—"}</p>
+                    <p className="text-sm text-text-secondary">
+                      {c.designation || "—"}
+                    </p>
                     {c.skills && (
                       <p className="text-xs text-text-secondary mt-2">
-                        <span className="font-medium text-text-primary">Skills:</span> {c.skills}
+                        <span className="font-medium text-text-primary">
+                          Skills:
+                        </span>{" "}
+                        {c.skills}
                       </p>
                     )}
                     {c.projects?.length > 0 && (
                       <p className="text-xs text-text-secondary mt-1">
-                        {c.projects.length} project(s), {c.certificates?.length || 0} certificate(s)
+                        {c.projects.length} project(s),{" "}
+                        {c.certificates?.length || 0} certificate(s)
                       </p>
                     )}
                   </div>
@@ -88,7 +119,11 @@ function BrowseCandidates({ candidates, search, setSearch, onSearch, onReachOut,
 
 function OutreachHistory({ logs }) {
   if (logs.length === 0) {
-    return <p className="text-text-secondary text-sm">You haven't reached out to anyone yet.</p>;
+    return (
+      <p className="text-text-secondary text-sm">
+        You haven't reached out to anyone yet.
+      </p>
+    );
   }
 
   return (
@@ -105,10 +140,16 @@ function OutreachHistory({ logs }) {
         <tbody>
           {logs.map((log) => (
             <tr key={log.id} className="border-t border-border">
-              <td className="px-4 py-3 text-text-primary">{log.candidateProfile?.user?.name || "—"}</td>
+              <td className="px-4 py-3 text-text-primary">
+                {log.candidateProfile?.user?.name || "—"}
+              </td>
               <td className="px-4 py-3 text-text-secondary">{log.role}</td>
-              <td className="px-4 py-3 text-text-secondary">{log.skillsRequired}</td>
-              <td className="px-4 py-3 text-text-secondary">{new Date(log.sentAt).toLocaleString()}</td>
+              <td className="px-4 py-3 text-text-secondary">
+                {log.skillsRequired}
+              </td>
+              <td className="px-4 py-3 text-text-secondary">
+                {new Date(log.sentAt).toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -119,10 +160,14 @@ function OutreachHistory({ logs }) {
 
 function ProfileTab({ profile, onUpdated }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ company: profile.company || "", location: profile.location || "" });
+  const [form, setForm] = useState({
+    company: profile.company || "",
+    location: profile.location || "",
+  });
   const [saving, setSaving] = useState(false);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -144,22 +189,36 @@ function ProfileTab({ profile, onUpdated }) {
       <div className="bg-bg-card border border-border rounded-xl p-6 max-w-md">
         <div className="flex justify-between items-start mb-4">
           <h3 className="font-semibold text-text-primary">Your Profile</h3>
-          <button onClick={() => setEditing(true)} className="text-sm text-accent hover:underline">
+          <button
+            onClick={() => setEditing(true)}
+            className="text-sm text-accent hover:underline"
+          >
             Edit
           </button>
         </div>
         <div className="space-y-3 text-sm">
-          <div><span className="text-text-secondary">Company:</span> <span className="text-text-primary">{profile.company || "—"}</span></div>
-          <div><span className="text-text-secondary">Location:</span> <span className="text-text-primary">{profile.location || "—"}</span></div>
+          <div>
+            <span className="text-text-secondary">Company:</span>{" "}
+            <span className="text-text-primary">{profile.company || "—"}</span>
+          </div>
+          <div>
+            <span className="text-text-secondary">Location:</span>{" "}
+            <span className="text-text-primary">{profile.location || "—"}</span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-bg-card border border-border rounded-xl p-6 max-w-md space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-bg-card border border-border rounded-xl p-6 max-w-md space-y-4"
+    >
       <div>
-        <label className="block text-sm text-text-secondary mb-1">Company</label>
+        <label className="block text-sm text-text-secondary mb-1">
+          Company
+        </label>
         <input
           name="company"
           value={form.company}
@@ -168,7 +227,9 @@ function ProfileTab({ profile, onUpdated }) {
         />
       </div>
       <div>
-        <label className="block text-sm text-text-secondary mb-1">Location</label>
+        <label className="block text-sm text-text-secondary mb-1">
+          Location
+        </label>
         <input
           name="location"
           value={form.location}
@@ -177,10 +238,18 @@ function ProfileTab({ profile, onUpdated }) {
         />
       </div>
       <div className="flex gap-3 justify-end">
-        <button type="button" onClick={() => setEditing(false)} className="text-sm text-text-secondary px-4 py-2 rounded hover:bg-bg-secondary">
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          className="text-sm text-text-secondary px-4 py-2 rounded hover:bg-bg-secondary"
+        >
           Cancel
         </button>
-        <button type="submit" disabled={saving} className="text-sm bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={saving}
+          className="text-sm bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded disabled:opacity-50"
+        >
           {saving ? "Saving..." : "Save"}
         </button>
       </div>
@@ -224,7 +293,9 @@ export default function RecruiterDashboard() {
       const res = await getMyOutreachHistory();
       setOutreachLogs(res.data.data);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to load outreach history");
+      toast.error(
+        err.response?.data?.message || "Failed to load outreach history",
+      );
     }
   };
 
@@ -246,9 +317,17 @@ export default function RecruiterDashboard() {
     loadCandidates(search);
   };
 
+  const handleClearSearch = () => {
+    setSearch("");
+    loadCandidates("");
+  };
+
   // Build a map of candidateProfileId -> most recent sentAt, for cooldown badges
   const lastContactMap = outreachLogs.reduce((acc, log) => {
-    if (!acc[log.candidateProfileId] || new Date(log.sentAt) > new Date(acc[log.candidateProfileId])) {
+    if (
+      !acc[log.candidateProfileId] ||
+      new Date(log.sentAt) > new Date(acc[log.candidateProfileId])
+    ) {
       acc[log.candidateProfileId] = log.sentAt;
     }
     return acc;
@@ -300,16 +379,24 @@ export default function RecruiterDashboard() {
                 onSearch={handleSearch}
                 onReachOut={setOutreachTarget}
                 lastContactMap={lastContactMap}
+                onClear={handleClearSearch}
               />
             )}
-            {activeTab === "Outreach History" && <OutreachHistory logs={outreachLogs} />}
-            {activeTab === "Profile" && <ProfileTab profile={profile} onUpdated={checkProfile} />}
+            {activeTab === "Outreach History" && (
+              <OutreachHistory logs={outreachLogs} />
+            )}
+            {activeTab === "Profile" && (
+              <ProfileTab profile={profile} onUpdated={checkProfile} />
+            )}
           </>
         )}
       </div>
 
       {outreachTarget && (
-        <OutreachModal candidate={outreachTarget} onClose={handleOutreachSent} />
+        <OutreachModal
+          candidate={outreachTarget}
+          onClose={handleOutreachSent}
+        />
       )}
     </div>
   );
