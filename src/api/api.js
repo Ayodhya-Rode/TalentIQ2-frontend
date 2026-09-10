@@ -72,9 +72,16 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const SKIP_REFRESH_PATHS = [
+      "/auth/refresh",
+      "/auth/login",
+      "/auth/register",
+    ];
     // Prevent refresh endpoint from triggering another refresh
-    if (originalRequest.url?.includes("/auth/refresh")) {
-      setAccessToken(null);
+    if (SKIP_REFRESH_PATHS.some((path) => originalRequest.url?.includes(path))) {
+      if (originalRequest.url?.includes("/auth/refresh")) {
+        setAccessToken(null);
+      }
       return Promise.reject(error);
     }
 
