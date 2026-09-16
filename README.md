@@ -3,7 +3,7 @@
 React frontend for TalentIQ, a mock interview booking platform. Provides five role-specific dashboards, live video interview rooms, and a full public-facing marketing site, with light and dark theming throughout.
 
 **Live App:** https://talentiq2-frontend2.onrender.com
-**Backend Repo:** https://github.com/Ayodhya-Rode/TalentIQ-2
+**Backend Repo:** https://github.com/sailotech-engineering-pocs/talentiq-service
 
 ## Tech Stack
 
@@ -38,6 +38,14 @@ React frontend for TalentIQ, a mock interview booking platform. Provides five ro
 - Rejected Users, 
 - Categories, and Cancellation Warnings
 - each user list filterable by role.
+
+
+## Testing Credentials
+
+### Super Admin
+- **Email:** ayodhyarode168@gmail.com
+- **Password:** SuperAdmin@123
+- **Role:** Super Admin
 
 ### Employee
 - Profile creation and editing (including multi-category selection)
