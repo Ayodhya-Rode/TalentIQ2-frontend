@@ -77,9 +77,9 @@ Clone and install dependencies:
 
 \`\`\` bash
 
-git clone - https://github.com/Ayodhya-Rode/TalentIQ2-frontend.git
+git clone https://github.com/sailotech-engineering-pocs/talentiq-ui.git
 
-cd TalentIQ2-frontend
+cd talentiq-ui
 
 npm install
 \`\`\`
