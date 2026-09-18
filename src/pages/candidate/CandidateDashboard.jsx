@@ -14,7 +14,7 @@ import {
 import { getCategories } from "../../api/categoryApi";
 import DashboardHeader from "../../components/DashboardHeader";
 import CandidateProfileForm from "./CandidateProfileForm";
-import { CheckCircle2, CalendarClock, Wallet, Clock } from "lucide-react";
+import { CheckCircle2, CalendarClock, Wallet, Clock,RotateCcw  } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import EditCandidateProfile from "./EditCandidateProfile";
@@ -77,6 +77,7 @@ function Overview({ summary, onProfileUpdated }) {
             value={summary.upcomingConfirmedInterviews}
           />
           <SummaryCard icon={Wallet} label="Total Paid" value={`₹${summary.totalAmountPaid}`} />
+          <SummaryCard icon={RotateCcw} label="Total Refunded" value={`₹${summary.totalRefunded}`} />
         </div>
 
         {editing && (
