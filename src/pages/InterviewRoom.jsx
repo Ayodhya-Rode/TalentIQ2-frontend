@@ -6,15 +6,23 @@ import {
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { getJoinToken } from "../api/interviewApi";
+import { Sparkles } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import AiQuestionsPanel from "../components/AiQuestionsPanel";
 
 export default function InterviewRoom() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
+    const { user } = useAuth();
 
   const [token, setToken] = useState(null);
   const [serverUrl, setServerUrl] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+
+
+const isEmployee = user?.role === "EMPLOYEE";
+const [showAi, setShowAi] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -98,7 +106,8 @@ export default function InterviewRoom() {
   }
 
   return (
-    <div className="h-screen bg-bg-primary">
+  <div className="flex h-screen bg-bg-primary">
+    <div className="relative min-w-0 flex-1">
       <LiveKitRoom
         video={true}
         audio={true}
@@ -110,6 +119,26 @@ export default function InterviewRoom() {
       >
         <VideoConference />
       </LiveKitRoom>
+
+      {isEmployee && !showAi && (
+        <button
+          onClick={() => setShowAi(true)}
+          className="absolute right-3 top-3 z-10 inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white shadow hover:bg-accent-hover"
+        >
+          <Sparkles size={16} /> AI Questions
+        </button>
+      )}
     </div>
-  );
+
+    {isEmployee && (
+      <aside
+        className={`${
+          showAi ? "fixed inset-0 z-40 sm:static sm:w-[380px]" : "hidden"
+        } shrink-0 border-l border-border bg-bg-card`}
+      >
+        <AiQuestionsPanel bookingId={bookingId} onClose={() => setShowAi(false)} />
+      </aside>
+    )}
+  </div>
+);
 }
