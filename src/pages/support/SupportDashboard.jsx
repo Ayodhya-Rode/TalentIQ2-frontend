@@ -73,83 +73,176 @@ function Overview({ summary }) {
   );
 }
 
+function QueryDetailModal({
+  query,
+  showResolveAction,
+  onResolve,
+  resolving,
+  onClose,
+}) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <h3 className="font-semibold text-text-primary break-words">
+            {query.subject}
+          </h3>
+          <span
+            className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${
+              query.status === "RESOLVED"
+                ? "bg-green-500/10 text-green-600"
+                : "bg-yellow-500/10 text-yellow-600"
+            }`}
+          >
+            {query.status}
+          </span>
+        </div>
+
+        <p className="text-xs text-text-secondary mb-4">
+          Raised by{" "}
+          <span className="text-text-primary font-medium">
+            {query.user?.name || "—"}
+          </span>
+          {query.user?.role ? ` (${query.user.role})` : ""}
+        </p>
+
+        <p className="text-sm text-text-primary whitespace-pre-wrap break-words bg-bg-secondary rounded-lg p-3 mb-4">
+          {query.message}
+        </p>
+
+        {query.resolutionNote && (
+          <div className="text-sm mb-4">
+            <p className="text-xs text-text-secondary mb-1">Resolution note</p>
+            <p className="text-text-primary whitespace-pre-wrap break-words">
+              {query.resolutionNote}
+            </p>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          {showResolveAction && query.status === "OPEN" && (
+            <button
+              onClick={() => {
+                onResolve(query.id);
+                onClose();
+              }}
+              disabled={resolving}
+              className="flex-1 text-sm font-medium bg-accent hover:bg-accent-hover text-white rounded-lg px-4 py-2 transition disabled:opacity-50"
+            >
+              Mark as solved
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="flex-1 text-sm border border-border rounded-lg px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QueriesTable({ queries, showResolveAction, onResolve, resolvingId }) {
+  const [selected, setSelected] = useState(null);
+
   if (queries.length === 0) {
     return <p className="text-text-secondary text-sm">No queries here.</p>;
   }
   return (
-    <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
-      <table className="w-full min-w-[800px] text-sm">
-        <thead className="bg-bg-secondary text-text-secondary text-left">
-          <tr>
-            <th className="px-4 py-3 font-medium">Raised By</th>
-            <th className="px-4 py-3 font-medium">Role</th>
-            <th className="px-4 py-3 font-medium">Subject</th>
-            <th className="px-4 py-3 font-medium">Message</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            {showResolveAction && (
-              <th className="px-4 py-3 font-medium text-right">Action</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {queries.map((q) => (
-            <tr key={q.id} className="border-t border-border align-top">
-              <td className="px-4 py-3 text-text-primary">
-                {q.user?.name || "—"}
-              </td>
-              <td className="px-4 py-3 text-text-secondary">
-                {q.user?.role || "—"}
-              </td>
-              <td className="px-4 py-3 text-text-primary">{q.subject}</td>
-              <td
-                className="px-4 py-3 text-text-secondary max-w-xs truncate"
-                title={q.message}
-              >
-                {q.message}
-              </td>
-              <td className="px-4 py-3">
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    q.status === "RESOLVED"
-                      ? "bg-green-500/10 text-green-600"
-                      : "bg-yellow-500/10 text-yellow-600"
-                  }`}
-                >
-                  {q.status}
-                </span>
-              </td>
+    <>
+      <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[800px] text-sm">
+          <thead className="bg-bg-secondary text-text-secondary text-left">
+            <tr>
+              <th className="px-4 py-3 font-medium">Raised By</th>
+              <th className="px-4 py-3 font-medium">Role</th>
+              <th className="px-4 py-3 font-medium">Subject</th>
+              <th className="px-4 py-3 font-medium">Message</th>
+              <th className="px-4 py-3 font-medium">Status</th>
               {showResolveAction && (
-                <td className="px-4 py-3 text-right">
-                  {q.status === "OPEN" ? (
-                    <button
-                      onClick={() => onResolve(q.id)}
-                      disabled={resolvingId === q.id}
-                      title="Mark as solved"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-green-600 transition-colors disabled:opacity-50"
-                    >
-                      {resolvingId === q.id ? (
-                        "Saving..."
-                      ) : (
-                        <>
-                          <Square size={16} />
-                          Solve
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
-                      <CheckSquare size={16} />
-                      Solved
-                    </span>
-                  )}
-                </td>
+                <th className="px-4 py-3 font-medium text-right">Action</th>
               )}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {queries.map((q) => (
+              <tr key={q.id} className="border-t border-border align-top">
+                <td className="px-4 py-3 text-text-primary">
+                  {q.user?.name || "—"}
+                </td>
+                <td className="px-4 py-3 text-text-secondary">
+                  {q.user?.role || "—"}
+                </td>
+                <td className="px-4 py-3 text-text-primary">{q.subject}</td>
+                <td className="px-4 py-3 text-text-secondary max-w-xs">
+                  <p className="line-clamp-2 break-words">{q.message}</p>
+                  <button
+                    onClick={() => setSelected(q)}
+                    className="mt-1 text-xs font-medium text-accent hover:underline"
+                  >
+                    View details
+                  </button>
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${
+                      q.status === "RESOLVED"
+                        ? "bg-green-500/10 text-green-600"
+                        : "bg-yellow-500/10 text-yellow-600"
+                    }`}
+                  >
+                    {q.status}
+                  </span>
+                </td>
+                {showResolveAction && (
+                  <td className="px-4 py-3 text-right">
+                    {q.status === "OPEN" ? (
+                      <button
+                        onClick={() => onResolve(q.id)}
+                        disabled={resolvingId === q.id}
+                        title="Mark as solved"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-green-600 transition-colors disabled:opacity-50"
+                      >
+                        {resolvingId === q.id ? (
+                          "Saving..."
+                        ) : (
+                          <>
+                            <Square size={16} />
+                            Solve
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
+                        <CheckSquare size={16} />
+                        Solved
+                      </span>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {selected && (
+        <QueryDetailModal
+          query={selected}
+          showResolveAction={showResolveAction}
+          onResolve={onResolve}
+          resolving={resolvingId === selected.id}
+          onClose={() => setSelected(null)}
+        />
+      )}
+    </>
   );
 }
 
