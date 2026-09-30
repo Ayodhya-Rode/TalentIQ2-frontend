@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate  } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import { useEffect } from "react";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -21,6 +27,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard";
 import SupportDashboard from "./pages/support/SupportDashboard";
 import { setNavigate } from "./api/api";
+import PublicScorecard from "./pages/PublicScorecard";
 
 function PublicLayout({ children }) {
   return (
@@ -70,7 +77,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-     <NavigateSetter />
+      <NavigateSetter />
       <ToastContainer
         position="top-right"
         autoClose={2000}
@@ -130,6 +137,8 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+
+        <Route path="/scorecard/:token" element={<PublicScorecard />} />
       </Routes>
     </BrowserRouter>
   );

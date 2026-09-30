@@ -10,6 +10,7 @@ import {
   rebookSameEmployee,
   getEmployeeOpenSlots,
   requestRefund as apiRequestRefund,
+  toggleScorecardShare
 } from "../../api/candidateApi";
 import { getCategories } from "../../api/categoryApi";
 import DashboardHeader from "../../components/DashboardHeader";
@@ -136,7 +137,7 @@ function BookInterview({ onBookingConfirmed }) {
     setBookingSlotId(slotId);
 
     try {
-      const orderRes = await createBookingOrder({ slotId });
+      const orderRes = await createBookingOrder({ slotId, categoryId: selectedCategory  });
       const { bookingId, razorpayOrderId, amount, currency } = orderRes.data.data;
 
       const options = {
@@ -330,6 +331,92 @@ function ViewFeedbackModal({ booking, onClose }) {
   );
 }
 
+function ShareScorecardModal({ booking, onClose, onChanged }) {
+  const [loading, setLoading] = useState(false);
+  const enabled = !!booking.shareEnabled && !!booking.shareToken;
+  const link = enabled ? `${window.location.origin}/scorecard/${booking.shareToken}` : "";
+
+  const handleToggle = async () => {
+    setLoading(true);
+    try {
+      const res = await toggleScorecardShare(booking.id, !enabled);
+      onChanged(booking.id, {
+        shareEnabled: res.data.shareEnabled,
+        shareToken: res.data.shareToken,
+        sharedAt: res.data.sharedAt,
+      });
+      toast.success(res.data.shareEnabled ? "Scorecard link created" : "Sharing turned off");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update sharing");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Could not copy, please copy the link manually");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-bg-card border border-border rounded-xl p-6 w-full max-w-md">
+        <h3 className="font-semibold text-text-primary mb-1">Share Scorecard</h3>
+        <p className="text-sm text-text-secondary mb-4">
+          Practice interview score: <span className="font-semibold text-accent">{booking.score}/10</span>
+        </p>
+
+        <div className="text-xs text-text-secondary bg-bg-secondary rounded-lg p-3 mb-4 leading-relaxed">
+          Anyone with the link can see: your first name and last initial, score, domain, date,
+          and the interviewer's designation and company. Your written feedback, email, and phone
+          are never shown. Turning sharing off kills the link.
+        </div>
+
+        {enabled && (
+          <div className="flex gap-2 mb-4">
+            <input
+              readOnly
+              value={link}
+              onFocus={(e) => e.target.select()}
+              className="flex-1 min-w-0 text-xs bg-bg-secondary border border-border rounded-lg px-3 py-2 text-text-primary"
+            />
+            <button
+              onClick={handleCopy}
+              className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-2 rounded-lg transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          className={`w-full text-sm font-medium rounded-lg px-4 py-2 transition disabled:opacity-50 ${
+            enabled
+              ? "bg-red-500/10 hover:bg-red-500/20 text-red-500"
+              : "bg-accent hover:bg-accent-hover text-white"
+          }`}
+        >
+          {loading ? "Please wait..." : enabled ? "Turn off sharing" : "Create shareable link"}
+        </button>
+
+        <button
+          onClick={onClose}
+          className="mt-3 w-full text-sm border border-border rounded-lg px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 const JOIN_WINDOW_BEFORE_MIN = 10;
 
 function MyBookings({
@@ -340,6 +427,7 @@ function MyBookings({
   onRefund,
   actionLoading,
   getEmployeeSlots,
+  onShareChanged
 }) {
   const navigate = useNavigate();
 
@@ -348,6 +436,8 @@ function MyBookings({
   const [rebookLoading, setRebookLoading] = useState(false);
   const [now, setNow] = useState(new Date());
   const [feedbackViewTarget, setFeedbackViewTarget] = useState(null);
+  const [shareTargetId, setShareTargetId] = useState(null);
+  const shareTarget = bookings.find((b) => b.id === shareTargetId);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -486,12 +576,23 @@ function MyBookings({
 
                     {/* View Feedback — only for COMPLETED, separate from CONFIRMED block */}
                     {booking.status === "COMPLETED" && booking.feedbackGivenAt && (
-                      <button
-                        onClick={() => setFeedbackViewTarget(booking)}
-                        className="text-xs font-medium bg-accent/10 hover:bg-accent/20 text-accent px-3 py-1.5 rounded-full transition-colors"
-                      >
-                        View Feedback
-                      </button>
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        <button
+                          onClick={() => setFeedbackViewTarget(booking)}
+                          className="text-xs font-medium bg-accent/10 hover:bg-accent/20 text-accent px-3 py-1.5 rounded-full transition-colors"
+                        >
+                          View Feedback
+                        </button>
+
+                        {booking.score !== null && booking.score !== undefined && (
+                          <button
+                            onClick={() => setShareTargetId(booking.id)}
+                            className="text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-600 px-3 py-1.5 rounded-full transition-colors"
+                          >
+                            {booking.shareEnabled ? "Manage Sharing" : "Share Scorecard"}
+                          </button>
+                        )}
+                      </div>
                     )}
 
                     {/* CANCELLED + PENDING REFUND */}
@@ -550,6 +651,14 @@ function MyBookings({
         <ViewFeedbackModal
           booking={feedbackViewTarget}
           onClose={() => setFeedbackViewTarget(null)}
+        />
+      )}
+
+      {shareTarget && (
+        <ShareScorecardModal
+          booking={shareTarget}
+          onClose={() => setShareTargetId(null)}
+          onChanged={onShareChanged}
         />
       )}
     </>
@@ -633,6 +742,10 @@ export default function CandidateDashboard() {
     }
   };
 
+  const handleShareChanged = (bookingId, share) => {
+    setBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, ...share } : b)));
+  };
+
   return (
     <div className="min-h-screen bg-bg-primary">
       <DashboardHeader title="Candidate Dashboard" />
@@ -675,6 +788,7 @@ export default function CandidateDashboard() {
                 onRefund={handleRefund}
                 actionLoading={actionLoading}
                 getEmployeeSlots={getEmployeeSlotsForRebook}
+                onShareChanged={handleShareChanged}
               />
             )}
           </>

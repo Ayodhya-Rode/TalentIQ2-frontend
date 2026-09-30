@@ -41,3 +41,6 @@ export const uploadResume = (file) => {
     headers: { "Content-Type": "multipart/form-data" },
   });
 };
+
+export const toggleScorecardShare = (bookingId, enabled) =>
+  api.patch(`/candidate/bookings/${bookingId}/share`, { enabled });
