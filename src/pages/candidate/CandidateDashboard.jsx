@@ -334,7 +334,7 @@ function ViewFeedbackModal({ booking, onClose }) {
 function ShareScorecardModal({ booking, onClose, onChanged }) {
   const [loading, setLoading] = useState(false);
   const enabled = !!booking.shareEnabled && !!booking.shareToken;
-  const link = enabled ? `${window.location.origin}/scorecard/${booking.shareToken}` : "";
+  const link = enabled ? `${window.location.origin}/s/${booking.shareToken}` : "";
 
   const handleToggle = async () => {
     setLoading(true);
