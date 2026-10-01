@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   getEmployeeDashboard,
   getEmployeeProfile,
@@ -20,6 +20,7 @@ import {
   Trash2,
   Clock,
   X,
+  ChevronDown,
 } from "lucide-react";
 import EmployeeProfileForm from "./EmployeeProfileForm";
 import { useNavigate } from "react-router-dom";
@@ -144,11 +145,140 @@ function Overview({ summary, profile, onProfileUpdated }) {
   );
 }
 
+const SLOT_STATUS_STYLE = {
+  OPEN: "bg-green-500/10 text-green-600",
+  BOOKED: "bg-yellow-500/10 text-yellow-600",
+  CANCELLED: "bg-red-500/10 text-red-500",
+  UNBOOKED: "bg-gray-500/10 text-text-secondary",
+};
+
+function SlotRow({ slot, label, canDelete, onDelete, dim }) {
+  const start = new Date(slot.startTime);
+  const end = new Date(slot.endTime);
+  const timeFmt = { hour: "2-digit", minute: "2-digit" };
+
+  return (
+    <div
+      className={`flex items-center justify-between px-4 py-3 ${
+        dim ? "opacity-60" : ""
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <Clock size={16} className="text-text-secondary" />
+        <div>
+          <p className="text-sm text-text-primary">
+            {start.toLocaleDateString([], {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </p>
+          <p className="text-xs text-text-secondary">
+            {start.toLocaleTimeString([], timeFmt)}
+            {" – "}
+            {end.toLocaleTimeString([], timeFmt)}
+          </p>
+        </div>
+        <span
+          className={`text-xs font-medium px-2 py-1 rounded-full ${
+            SLOT_STATUS_STYLE[label] || SLOT_STATUS_STYLE.BOOKED
+          }`}
+        >
+          {label}
+        </span>
+      </div>
+      {canDelete && (
+        <button
+          onClick={() => onDelete(slot.id)}
+          className="p-2 rounded-full text-red-500 hover:bg-red-500/10"
+        >
+          <Trash2 size={16} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SlotSection({
+  title,
+  count,
+  collapsible = false,
+  open = true,
+  onToggle,
+  emptyText,
+  children,
+}) {
+  return (
+    <div className="mb-6">
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={onToggle}
+          className="w-full flex items-center justify-between mb-2 text-sm font-semibold text-text-secondary hover:text-text-primary"
+        >
+          <span>
+            {title} ({count})
+          </span>
+          <ChevronDown
+            size={16}
+            className={`transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+      ) : (
+        <h3 className="mb-2 text-sm font-semibold text-text-primary">
+          {title} ({count})
+        </h3>
+      )}
+
+      {open &&
+        (count === 0 ? (
+          <p className="text-text-secondary text-sm">{emptyText}</p>
+        ) : (
+          <div className="bg-bg-card border border-border rounded-xl divide-y divide-border">
+            {children}
+          </div>
+        ))}
+    </div>
+  );
+}
+
+const SLOT_TABS = ["Upcoming", "Past", "Cancelled"];
+
 function MySlots({ slots, onCreate, onDelete, onRefresh }) {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
+  const [slotTab, setSlotTab] = useState("Upcoming");
+
+  const groups = useMemo(() => {
+    const now = Date.now();
+    const byStart = (a, b) => new Date(a.startTime) - new Date(b.startTime);
+    const up = [];
+    const pa = [];
+    const ca = [];
+
+    for (const s of slots) {
+      if (s.status === "CANCELLED") ca.push(s);
+      else if (new Date(s.endTime).getTime() > now) up.push(s);
+      else pa.push(s);
+    }
+
+    return {
+      Upcoming: up.sort(byStart),
+      Past: pa.sort((a, b) => byStart(b, a)),
+      Cancelled: ca.sort((a, b) => byStart(b, a)),
+    };
+  }, [slots]);
+
+  const EMPTY_TEXT = {
+    Upcoming: "No upcoming slots. Add one above.",
+    Past: "No past slots.",
+    Cancelled: "No cancelled slots.",
+  };
+
+  const visible = groups[slotTab];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -226,52 +356,40 @@ function MySlots({ slots, onCreate, onDelete, onRefresh }) {
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
-      {slots.length === 0 ? (
-        <p className="text-text-secondary text-sm">No slots created yet.</p>
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        {SLOT_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setSlotTab(tab)}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              slotTab === tab
+                ? "bg-accent text-white"
+                : "bg-bg-secondary text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {tab} ({groups[tab].length})
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
+        <p className="text-text-secondary text-sm">{EMPTY_TEXT[slotTab]}</p>
       ) : (
-        <div className="bg-bg-card border border-border rounded-xl divide-y divide-border">
-          {slots.map((slot) => (
-            <div
+        <div className="max-h-[60vh] overflow-y-auto bg-bg-card border border-border rounded-xl divide-y divide-border">
+          {visible.map((slot) => (
+            <SlotRow
               key={slot.id}
-              className="flex items-center justify-between px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <Clock size={16} className="text-text-secondary" />
-                <div>
-                  <p className="text-sm text-text-primary">
-                    {new Date(slot.startTime).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs text-text-secondary">
-                    {new Date(slot.startTime).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                    {" – "}
-                    {new Date(slot.endTime).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    slot.status === "OPEN"
-                      ? "bg-green-500/10 text-green-600"
-                      : "bg-yellow-500/10 text-yellow-600"
-                  }`}
-                >
-                  {slot.status}
-                </span>
-              </div>
-              {slot.status === "OPEN" && (
-                <button
-                  onClick={() => onDelete(slot.id)}
-                  className="p-2 rounded-full text-red-500 hover:bg-red-500/10"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
+              slot={slot}
+              label={
+                slotTab === "Past" && slot.status === "OPEN"
+                  ? "UNBOOKED"
+                  : slot.status
+              }
+              canDelete={slotTab === "Upcoming" && slot.status === "OPEN"}
+              onDelete={onDelete}
+              dim={slotTab !== "Upcoming"}
+            />
           ))}
         </div>
       )}
@@ -394,7 +512,7 @@ function MyBookings({
   onCancel,
   onPostpone,
   actionLoading,
-  onRefresh
+  onRefresh,
 }) {
   const navigate = useNavigate();
 
