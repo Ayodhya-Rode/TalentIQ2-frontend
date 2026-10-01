@@ -158,9 +158,9 @@ function QueriesTable({ queries, showResolveAction, onResolve, resolvingId }) {
   }
   return (
     <>
-      <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
+      <div className="bg-bg-card border border-border rounded-xl max-h-[60vh] overflow-auto">
         <table className="w-full min-w-[800px] text-sm">
-          <thead className="bg-bg-secondary text-text-secondary text-left">
+          <thead className="sticky top-0 z-10 bg-bg-secondary text-text-secondary text-left">
             <tr>
               <th className="px-4 py-3 font-medium">Raised By</th>
               <th className="px-4 py-3 font-medium">Role</th>
