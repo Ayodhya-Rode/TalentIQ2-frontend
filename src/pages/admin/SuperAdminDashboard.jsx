@@ -190,9 +190,9 @@ function PendingApprovals({
   }
 
   return (
-    <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
+    <div className="bg-bg-card border border-border rounded-xl max-h-[60vh] overflow-auto">
       <table className="w-full text-sm">
-        <thead className="bg-bg-secondary text-text-secondary text-left">
+        <thead className="sticky top-0 z-10 bg-bg-secondary text-text-secondary text-left">
           <tr>
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">Email</th>
@@ -257,9 +257,9 @@ function AllUsers({ users, roleFilter, setRoleFilter }) {
         ))}
       </div>
 
-      <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-bg-card border border-border rounded-xl max-h-[60vh] overflow-auto">
         <table className="w-full text-sm">
-          <thead className="bg-bg-secondary text-text-secondary text-left">
+          <thead className="sticky top-0 z-10 bg-bg-secondary text-text-secondary text-left">
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Email</th>
@@ -305,9 +305,9 @@ function CancellationWarnings({ warnings }) {
   }
 
   return (
-    <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
+     <div className="bg-bg-card border border-border rounded-xl max-h-[60vh] overflow-auto">
       <table className="w-full text-sm">
-        <thead className="bg-bg-secondary text-text-secondary text-left">
+        <thead className="sticky top-0 z-10 bg-bg-secondary text-text-secondary text-left">
           <tr>
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">Email</th>
@@ -379,7 +379,7 @@ function Categories({ categories, onCreate, onUpdate, onDelete }) {
         </button>
       </form>
 
-      <div className="bg-bg-card border border-border rounded-xl divide-y divide-border">
+      <div className="max-h-[60vh] overflow-y-auto bg-bg-card border border-border rounded-xl divide-y divide-border">
         {categories.map((cat) => (
           <div
             key={cat.id}
