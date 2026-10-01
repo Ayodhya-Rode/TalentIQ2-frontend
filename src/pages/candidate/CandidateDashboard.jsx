@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   getCandidateDashboard,
   getCandidateProfile,
@@ -419,6 +419,14 @@ function ShareScorecardModal({ booking, onClose, onChanged }) {
 
 const JOIN_WINDOW_BEFORE_MIN = 10;
 
+const BOOKING_TABS = ["Upcoming", "Past", "Cancelled"];
+
+const BOOKING_EMPTY_TEXT = {
+  Upcoming: "No upcoming interviews.",
+  Past: "No completed interviews yet.",
+  Cancelled: "No cancelled bookings.",
+};
+
 function MyBookings({
   bookings,
   onConfirm,
@@ -437,6 +445,7 @@ function MyBookings({
   const [now, setNow] = useState(new Date());
   const [feedbackViewTarget, setFeedbackViewTarget] = useState(null);
   const [shareTargetId, setShareTargetId] = useState(null);
+  const [bookingTab, setBookingTab] = useState("Upcoming");
   const shareTarget = bookings.find((b) => b.id === shareTargetId);
 
   useEffect(() => {
@@ -445,6 +454,34 @@ function MyBookings({
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const groups = useMemo(() => {
+    const startOf = (b) => new Date(b.slot?.startTime || 0).getTime();
+    const up = [];
+    const pa = [];
+    const ca = [];
+
+    for (const b of bookings) {
+      if (b.status === "CONFIRMED") up.push(b);
+      else if (b.status === "COMPLETED") pa.push(b);
+      else ca.push(b); // CANCELLED, EXPIRED, PENDING_PAYMENT
+    }
+
+    return {
+      Upcoming: up.sort((a, b) => startOf(a) - startOf(b)),
+      Past: pa.sort((a, b) => startOf(b) - startOf(a)),
+      Cancelled: ca.sort((a, b) => startOf(b) - startOf(a)),
+    };
+  }, [bookings]);
+
+  // Cancelled bookings where the candidate still has to do something about money
+  const needsAction = groups.Cancelled.filter(
+    (b) =>
+      b.status === "CANCELLED" &&
+      (b.refundStatus === "PENDING" || b.refundStatus === "FAILED"),
+  ).length;
+
+  const visibleBookings = groups[bookingTab];
 
   const canJoinNow = (booking) => {
     if (!booking?.slot?.startTime || !booking?.slot?.endTime) return false;
@@ -489,153 +526,179 @@ function MyBookings({
 
   return (
     <>
-      <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
-        <table className="w-full min-w-[800px] text-sm">
-          <thead className="bg-bg-secondary text-text-secondary text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium">Employee</th>
-              <th className="px-4 py-3 font-medium">Slot</th>
-              <th className="px-4 py-3 font-medium">Amount</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium text-right">Action</th>
-            </tr>
-          </thead>
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        {BOOKING_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setBookingTab(tab)}
+            className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              bookingTab === tab
+                ? "bg-accent text-white"
+                : "bg-bg-secondary text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            {tab} ({groups[tab].length})
+            {tab === "Cancelled" && needsAction > 0 && (
+              <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                {needsAction} need action
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-          <tbody>
-            {bookings.map((booking) => {
-              const joinAllowed = canJoinNow(booking);
+      {visibleBookings.length === 0 ? (
+        <p className="text-text-secondary text-sm">{BOOKING_EMPTY_TEXT[bookingTab]}</p>
+      ) : (
+        <div className="bg-bg-card border border-border rounded-xl max-h-[60vh] overflow-auto">
+          <table className="w-full min-w-[800px] text-sm">
+            <thead className="sticky top-0 z-10 bg-bg-secondary text-text-secondary text-left">
+              <tr>
+                <th className="px-4 py-3 font-medium">Employee</th>
+                <th className="px-4 py-3 font-medium">Slot</th>
+                <th className="px-4 py-3 font-medium">Amount</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium text-right">Action</th>
+              </tr>
+            </thead>
 
-              return (
-                <tr key={booking.id} className="border-t border-border">
-                  <td className="px-4 py-3 text-text-primary">
-                    {booking.employeeProfile?.user?.name || "—"}
-                  </td>
+            <tbody>
+              {visibleBookings.map((booking) => {
+                const joinAllowed = canJoinNow(booking);
 
-                  <td className="px-4 py-3 text-text-secondary">
-                    {booking.slot?.startTime ? new Date(booking.slot.startTime).toLocaleString() : "—"}
-                  </td>
+                return (
+                  <tr key={booking.id} className="border-t border-border">
+                    <td className="px-4 py-3 text-text-primary">
+                      {booking.employeeProfile?.user?.name || "—"}
+                    </td>
 
-                  <td className="px-4 py-3 text-text-secondary">₹{booking.amount}</td>
+                    <td className="px-4 py-3 text-text-secondary">
+                      {booking.slot?.startTime ? new Date(booking.slot.startTime).toLocaleString() : "—"}
+                    </td>
 
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          booking.status === "COMPLETED"
-                            ? "bg-green-500/10 text-green-600"
-                            : booking.status === "CONFIRMED"
-                            ? "bg-blue-500/10 text-blue-600"
-                            : booking.status === "CANCELLED"
-                            ? "bg-red-500/10 text-red-500"
-                            : "bg-gray-500/10 text-text-secondary"
-                        }`}
-                      >
-                        {booking.status}
-                      </span>
+                    <td className="px-4 py-3 text-text-secondary">₹{booking.amount}</td>
 
-                      {booking.status === "CANCELLED" && booking.refundStatus === "PROCESSED" && (
-                        <span className="text-xs text-green-600">Refunded</span>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            booking.status === "COMPLETED"
+                              ? "bg-green-500/10 text-green-600"
+                              : booking.status === "CONFIRMED"
+                              ? "bg-blue-500/10 text-blue-600"
+                              : booking.status === "CANCELLED"
+                              ? "bg-red-500/10 text-red-500"
+                              : "bg-gray-500/10 text-text-secondary"
+                          }`}
+                        >
+                          {booking.status}
+                        </span>
+
+                        {booking.status === "CANCELLED" && booking.refundStatus === "PROCESSED" && (
+                          <span className="text-xs text-green-600">Refunded</span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3 text-right">
+                      {/* CONFIRMED */}
+                      {booking.status === "CONFIRMED" && (
+                        <div className="flex gap-2 justify-end flex-wrap">
+                          <button
+                            onClick={() => navigate(`/interview-room/${booking.id}`)}
+                            disabled={!joinAllowed}
+                            title={
+                              joinAllowed
+                                ? "Join interview"
+                                : `Join opens ${JOIN_WINDOW_BEFORE_MIN} minutes before start`
+                            }
+                            className="text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-500/10"
+                          >
+                            Join Interview
+                          </button>
+
+                          {!booking.candidateConfirmedAt && (
+                            <button
+                              onClick={() => onConfirm(booking.id)}
+                              disabled={confirmLoadingId === booking.id}
+                              className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {confirmLoadingId === booking.id ? "Confirming..." : "Confirm Complete"}
+                            </button>
+                          )}
+
+                          {booking.candidateConfirmedAt && (
+                            <span className="text-xs text-text-secondary px-2 py-1.5">
+                              Waiting for employee
+                            </span>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  </td>
 
-                  <td className="px-4 py-3 text-right">
-                    {/* CONFIRMED */}
-                    {booking.status === "CONFIRMED" && (
-                      <div className="flex gap-2 justify-end flex-wrap">
-                        <button
-                          onClick={() => navigate(`/interview-room/${booking.id}`)}
-                          disabled={!joinAllowed}
-                          title={
-                            joinAllowed
-                              ? "Join interview"
-                              : `Join opens ${JOIN_WINDOW_BEFORE_MIN} minutes before start`
-                          }
-                          className="text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-500/10"
-                        >
-                          Join Interview
-                        </button>
-
-                        {!booking.candidateConfirmedAt && (
+                      {/* View Feedback — only for COMPLETED, separate from CONFIRMED block */}
+                      {booking.status === "COMPLETED" && booking.feedbackGivenAt && (
+                        <div className="flex gap-2 justify-end flex-wrap">
                           <button
-                            onClick={() => onConfirm(booking.id)}
-                            disabled={confirmLoadingId === booking.id}
-                            className="text-xs font-medium bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => setFeedbackViewTarget(booking)}
+                            className="text-xs font-medium bg-accent/10 hover:bg-accent/20 text-accent px-3 py-1.5 rounded-full transition-colors"
                           >
-                            {confirmLoadingId === booking.id ? "Confirming..." : "Confirm Complete"}
+                            View Feedback
                           </button>
-                        )}
 
-                        {booking.candidateConfirmedAt && (
-                          <span className="text-xs text-text-secondary px-2 py-1.5">
-                            Waiting for employee
-                          </span>
-                        )}
-                      </div>
-                    )}
+                          {booking.score !== null && booking.score !== undefined && (
+                            <button
+                              onClick={() => setShareTargetId(booking.id)}
+                              className="text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-600 px-3 py-1.5 rounded-full transition-colors"
+                            >
+                              {booking.shareEnabled ? "Manage Sharing" : "Share Scorecard"}
+                            </button>
+                          )}
+                        </div>
+                      )}
 
-                    {/* View Feedback — only for COMPLETED, separate from CONFIRMED block */}
-                    {booking.status === "COMPLETED" && booking.feedbackGivenAt && (
-                      <div className="flex gap-2 justify-end flex-wrap">
-                        <button
-                          onClick={() => setFeedbackViewTarget(booking)}
-                          className="text-xs font-medium bg-accent/10 hover:bg-accent/20 text-accent px-3 py-1.5 rounded-full transition-colors"
-                        >
-                          View Feedback
-                        </button>
-
-                        {booking.score !== null && booking.score !== undefined && (
+                      {/* CANCELLED + PENDING REFUND */}
+                      {booking.status === "CANCELLED" && booking.refundStatus === "PENDING" && (
+                        <div className="flex gap-2 justify-end flex-wrap">
                           <button
-                            onClick={() => setShareTargetId(booking.id)}
-                            className="text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-600 px-3 py-1.5 rounded-full transition-colors"
+                            onClick={() => openRebookModal(booking)}
+                            disabled={actionLoading || rebookLoading}
+                            className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {booking.shareEnabled ? "Manage Sharing" : "Share Scorecard"}
+                            <CalendarClock size={12} />
+                            {rebookLoading && rebookTarget?.id === booking.id ? "Loading..." : "Rebook Same Employee"}
                           </button>
-                        )}
-                      </div>
-                    )}
 
-                    {/* CANCELLED + PENDING REFUND */}
-                    {booking.status === "CANCELLED" && booking.refundStatus === "PENDING" && (
-                      <div className="flex gap-2 justify-end flex-wrap">
-                        <button
-                          onClick={() => openRebookModal(booking)}
-                          disabled={actionLoading || rebookLoading}
-                          className="flex items-center gap-1 text-xs font-medium bg-bg-secondary hover:bg-bg-primary text-text-secondary px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <CalendarClock size={12} />
-                          {rebookLoading && rebookTarget?.id === booking.id ? "Loading..." : "Rebook Same Employee"}
-                        </button>
+                          <button
+                            onClick={() => onRefund(booking.id)}
+                            disabled={actionLoading}
+                            className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Wallet size={12} />
+                            Request Refund
+                          </button>
+                        </div>
+                      )}
 
+                      {/* CANCELLED + FAILED REFUND */}
+                      {booking.status === "CANCELLED" && booking.refundStatus === "FAILED" && (
                         <button
                           onClick={() => onRefund(booking.id)}
                           disabled={actionLoading}
-                          className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
                         >
                           <Wallet size={12} />
-                          Request Refund
+                          Retry Refund
                         </button>
-                      </div>
-                    )}
-
-                    {/* CANCELLED + FAILED REFUND */}
-                    {booking.status === "CANCELLED" && booking.refundStatus === "FAILED" && (
-                      <button
-                        onClick={() => onRefund(booking.id)}
-                        disabled={actionLoading}
-                        className="flex items-center gap-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-600 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
-                      >
-                        <Wallet size={12} />
-                        Retry Refund
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {rebookTarget && (
         <RebookModal
